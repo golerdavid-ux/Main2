@@ -1,0 +1,39 @@
+{
+  "products": [
+    {
+      "id": "prod_001",
+      "name": "Web Design - Basic",
+      "description": "Basic website design package",
+      "rate": 500,
+      "unit": "project"
+    },
+    {
+      "id": "prod_002",
+      "name": "Web Design - Premium",
+      "description": "Premium website design with advanced features",
+      "rate": 1500,
+      "unit": "project"
+    },
+    {
+      "id": "prod_003",
+      "name": "Consulting - Hourly",
+      "description": "Business consulting services",
+      "rate": 150,
+      "unit": "hour"
+    },
+    {
+      "id": "prod_004",
+      "name": "SEO Optimization",
+      "description": "Search engine optimization services",
+      "rate": 750,
+      "unit": "month"
+    },
+    {
+      "id": "prod_005",
+      "name": "Content Writing",
+      "description": "Professional content writing",
+      "rate": 100,
+      "unit": "article"
+    }
+  ]
+}
