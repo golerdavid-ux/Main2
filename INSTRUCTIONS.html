@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator - Instructions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+        }
+        .step {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        .code {
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧾 Invoice Generator - Setup Instructions</h1>
+
+        <p>Your invoice generator has been created successfully! Here's how to run and test it:</p>
+
+        <div class="note">
+            <strong>⚠️ Important:</strong> This application requires Node.js to be installed on your local machine.
+        </div>
+
+        <div class="step">
+            <h3>Step 1: Download the Code</h3>
+            <p>Download the entire <code>Main2</code> folder from your Claude Code workspace to your local computer.</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Install Backend Dependencies</h3>
+            <p>Open a terminal/command prompt and run:</p>
+            <div class="code">
+cd path/to/Main2/backend<br>
+npm install
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Configure Email Settings</h3>
+            <p>Edit <code>backend/.env</code> with your email credentials:</p>
+            <ul>
+                <li>For Gmail: Use an App Password (not your regular password)</li>
+                <li>Update your business information</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Start the Backend Server</h3>
+            <div class="code">
+cd backend<br>
+npm start
+            </div>
+            <p>Should show: "Invoice Generator API running on port 3001"</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Install Frontend Dependencies</h3>
+            <p>Open a NEW terminal/command prompt and run:</p>
+            <div class="code">
+cd path/to/Main2/frontend<br>
+npm install
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Step 6: Start the Frontend</h3>
+            <div class="code">
+npm start
+            </div>
+            <p>Your browser should automatically open to <code>http://localhost:3000</code></p>
+        </div>
+
+        <div class="step">
+            <h3>Step 7: Test the Invoice Generator</h3>
+            <ol>
+                <li>Fill in customer information</li>
+                <li>Select a product from the dropdown</li>
+                <li>Click "Preview PDF" to test without sending email</li>
+                <li>Click "Generate & Email Invoice" to send the invoice</li>
+            </ol>
+        </div>
+
+        <h2>📁 Project Location</h2>
+        <p>All files are in: <code>/home/user/Main2/</code></p>
+        <ul>
+            <li><code>backend/</code> - Node.js server, PDF generation, email service</li>
+            <li><code>frontend/</code> - React web interface</li>
+            <li><code>README.md</code> - Detailed documentation</li>
+        </ul>
+
+        <h2>🔑 Features</h2>
+        <ul>
+            <li>✅ Professional invoice form</li>
+            <li>✅ Pre-configured product rates</li>
+            <li>✅ Automatic tax calculation</li>
+            <li>✅ PDF generation</li>
+            <li>✅ Email delivery with attachments</li>
+            <li>✅ Preview before sending</li>
+        </ul>
+
+        <h2>❓ Need Help?</h2>
+        <p>Check the <code>README.md</code> file for:</p>
+        <ul>
+            <li>Detailed setup instructions</li>
+            <li>API documentation</li>
+            <li>Troubleshooting tips</li>
+            <li>Email configuration help</li>
+        </ul>
+    </div>
+</body>
+</html>
