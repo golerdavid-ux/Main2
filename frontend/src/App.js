@@ -3,7 +3,7 @@ import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-const DENOMINATIONS = ['1', '2', '5', '10', '20', '50', '100'];
+const DENOMINATIONS = ['1', '2', '5', '10', '20', '50', '100', '500', '1000', '5000', '10000'];
 
 const ERROR_TYPES = [
   'Miscut', 'Inverted Overprint', 'Gutter Fold', 'Ink Smear',
@@ -472,12 +472,16 @@ function App() {
           <div className="form-row">
             <div className="form-group">
               <label>Denomination *</label>
-              <select name="denomination" value={formData.denomination} onChange={handleInputChange} required>
-                <option value="">Select...</option>
+              <input
+                type="text" name="denomination" value={formData.denomination}
+                onChange={handleInputChange} placeholder="e.g., 1, 5, 20, 100, 500"
+                list="denominations" required
+              />
+              <datalist id="denominations">
                 {DENOMINATIONS.map(d => (
                   <option key={d} value={d}>${d}</option>
                 ))}
-              </select>
+              </datalist>
             </div>
             <div className="form-group">
               <label>Series Year *</label>
