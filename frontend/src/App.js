@@ -243,6 +243,27 @@ function App() {
     window.open(`${API_BASE_URL}/api/notes/export/csv`, '_blank');
   };
 
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncSheets = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notes/sync-sheets`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (data.success) {
+        showMessage(data.message, 'success');
+      } else {
+        showMessage(data.error || 'Failed to sync to Google Sheets', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to sync to Google Sheets', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filteredNotes = notes.filter(note => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -586,9 +607,14 @@ function App() {
         </div>
         <div className="header-actions">
           {notes.length > 0 && (
-            <button className="btn-export" onClick={handleExportCSV}>
-              Export CSV
-            </button>
+            <>
+              <button className="btn-export" onClick={handleSyncSheets} disabled={syncing}>
+                {syncing ? 'Syncing...' : 'Sync to Google Sheets'}
+              </button>
+              <button className="btn-export" onClick={handleExportCSV}>
+                Export CSV
+              </button>
+            </>
           )}
           <button className="btn-primary" onClick={() => { resetForm(); setView('add'); }}>
             + Add Note

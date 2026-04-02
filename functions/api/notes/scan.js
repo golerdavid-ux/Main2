@@ -2,11 +2,22 @@
  * POST /api/notes/scan
  * Upload a photo of a banknote and extract details using Workers AI vision model.
  */
+
+async function ensureLicenseAccepted(ai) {
+  try {
+    await ai.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+      messages: [{ role: 'user', content: 'agree' }],
+      max_tokens: 1,
+    });
+  } catch {
+    // Already accepted or other error — continue anyway
+  }
+}
+
 export async function onRequestPost(context) {
   try {
     const contentType = context.request.headers.get('content-type') || '';
     let imageBytes;
-
     let side = 'front';
 
     if (contentType.includes('multipart/form-data')) {
@@ -49,6 +60,9 @@ Return ONLY the JSON object, no other text.`;
 
     const prompt = side === 'back' ? backPrompt : frontPrompt;
 
+    // Accept the Llama license if needed (one-time)
+    await ensureLicenseAccepted(context.env.AI);
+
     const response = await context.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
       messages: [
         {
@@ -71,7 +85,6 @@ Return ONLY the JSON object, no other text.`;
         extracted = JSON.parse(jsonMatch[0]);
       }
     } catch (parseError) {
-      // If JSON parsing fails, try to extract fields manually
       extracted = {
         raw: text,
         parseError: 'Could not parse structured data. Check the raw response.',
