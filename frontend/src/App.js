@@ -90,23 +90,26 @@ function App() {
     }));
   };
 
-  const resizeImage = (file, maxWidth = 1024) => {
+  const resizeImage = (file, maxDim = 512) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
         }
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob((blob) => {
-          resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-        }, 'image/jpeg', 0.8);
+          resolve(new File([blob], 'note.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.6);
       };
       img.src = URL.createObjectURL(file);
     });
