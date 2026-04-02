@@ -73,9 +73,13 @@ export async function onRequestPost(context) {
       try { return JSON.parse(str || '[]'); } catch { return []; }
     };
 
+    // Determine the site URL from the request
+    const siteUrl = new URL(context.request.url).origin;
+
     // Build rows: header + data
     const headers = [
-      'ID', 'Denomination', 'Series Year', 'Serial Number',
+      'Photo (Front)', 'Photo (Back)',
+      'Denomination', 'Series Year', 'Serial Number',
       'Friedberg #', 'Star Note', 'Fancy Serials', 'Errors',
       'Treasurer', 'Secretary',
       'Grade', 'Grader', 'Cert #', 'Grading Comments',
@@ -83,7 +87,8 @@ export async function onRequestPost(context) {
     ];
 
     const rows = results.map(r => [
-      r.id,
+      r.photo_front_key ? `=IMAGE("${siteUrl}/api/photos/${r.photo_front_key.replace('notes/', '')}", 1)` : '',
+      r.photo_back_key ? `=IMAGE("${siteUrl}/api/photos/${r.photo_back_key.replace('notes/', '')}", 1)` : '',
       `$${r.denomination}`,
       r.series_year,
       r.serial_number,
@@ -111,7 +116,7 @@ export async function onRequestPost(context) {
 
     // Clear the sheet first
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:S:clear`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:U:clear`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
