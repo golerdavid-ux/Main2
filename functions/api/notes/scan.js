@@ -1,14 +1,18 @@
 /**
  * POST /api/notes/scan
- * Upload a photo of a banknote and extract details using Workers AI vision model.
- * Uses @cf/unum/uform-gen2-qwen-500m (no license needed) for image-to-text,
- * then @cf/meta/llama-3.1-8b-instruct to parse the description into structured data.
+ * Upload a photo of a banknote and extract details using Google Gemini Vision.
  */
 
 export async function onRequestPost(context) {
   try {
+    const GEMINI_API_KEY = context.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
+      return Response.json({ error: 'Gemini API key not configured' }, { status: 500 });
+    }
+
     const contentType = context.request.headers.get('content-type') || '';
-    let imageBytes;
+    let imageBase64;
+    let mimeType = 'image/jpeg';
     let side = 'front';
 
     if (contentType.includes('multipart/form-data')) {
@@ -18,50 +22,80 @@ export async function onRequestPost(context) {
       if (!file || !(file instanceof File)) {
         return Response.json({ error: 'No photo uploaded' }, { status: 400 });
       }
-      imageBytes = [...new Uint8Array(await file.arrayBuffer())];
+      mimeType = file.type || 'image/jpeg';
+      const buffer = await file.arrayBuffer();
+      imageBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
     } else {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
 
-    // Step 1: Use vision model to describe the banknote image
-    const describePrompt = side === 'front'
-      ? 'Describe this U.S. banknote in detail. Include the denomination, series year, serial number, signatures, seal color, and any notable features or errors you can see.'
-      : 'Describe the back of this U.S. banknote in detail. Include the denomination and any notable features, errors, or condition details you can see.';
+    const frontPrompt = `You are an expert U.S. currency cataloger analyzing a photo of the FRONT (obverse) of a U.S. banknote. Extract every detail you can see with precision.
 
-    const visionResult = await context.env.AI.run('@cf/unum/uform-gen2-qwen-500m', {
-      prompt: describePrompt,
-      image: imageBytes,
-    });
+Return ONLY a valid JSON object with these fields (use empty string "" if you cannot determine a field):
+{
+  "denomination": "the face value as just a number, e.g. 1, 5, 10, 20, 50, 100",
+  "seriesYear": "the exact series year printed on the note, e.g. 2013 or 2017A",
+  "serialNumber": "the EXACT full serial number including all letters, digits, and star symbol if present. Read every character carefully.",
+  "treasurerSignature": "full name of the Treasurer of the United States printed on the note",
+  "secretarySignature": "full name of the Secretary of the Treasury printed on the note",
+  "errors": [],
+  "condition": "brief description of the note's physical condition"
+}
 
-    const description = visionResult.description || visionResult.response || '';
+IMPORTANT: Read the serial number character by character. Include the prefix letter(s), all 8 digits, and the suffix letter. If there is a star (*) symbol, include it.
 
-    // Step 2: Use text model to extract structured data from the description
-    const extractPrompt = side === 'front'
-      ? `You are a U.S. currency expert. Based on this description of the front of a banknote, extract the details into a JSON object.
+Return ONLY the JSON object, no other text.`;
 
-Description: "${description}"
+    const backPrompt = `You are an expert U.S. currency cataloger analyzing a photo of the BACK (reverse) of a U.S. banknote. Extract any details visible.
 
-Return ONLY a valid JSON object with these fields (use empty string "" if not mentioned):
-{"denomination":"number only e.g. 1 5 10 20 50 100","seriesYear":"e.g. 2013 or 2017A","serialNumber":"full serial including letters and star if present","treasurerSignature":"name of Treasurer","secretarySignature":"name of Secretary","errors":"any printing errors or empty string","condition":"physical condition"}
+Return ONLY a valid JSON object with these fields (use empty string "" if you cannot determine a field):
+{
+  "denomination": "the face value as just a number if visible",
+  "errors": [],
+  "condition": "brief description of the note's physical condition from the back"
+}
 
-JSON only, no other text:`
-      : `You are a U.S. currency expert. Based on this description of the back of a banknote, extract details into a JSON object.
+Look for any printing errors like miscuts, misalignment, ink smears, inverted back, gutter folds, or offset printing.
 
-Description: "${description}"
+Return ONLY the JSON object, no other text.`;
 
-Return ONLY a valid JSON object with these fields (use empty string "" if not mentioned):
-{"denomination":"number only e.g. 1 5 10 20 50 100","errors":"any printing errors or empty string","condition":"physical condition"}
+    const prompt = side === 'back' ? backPrompt : frontPrompt;
 
-JSON only, no other text:`;
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: imageBase64,
+                },
+              },
+            ],
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 512,
+          },
+        }),
+      }
+    );
 
-    const textResult = await context.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: [{ role: 'user', content: extractPrompt }],
-      max_tokens: 300,
-    });
+    const geminiData = await geminiResponse.json();
 
-    const text = textResult.response || '';
+    if (!geminiResponse.ok) {
+      const errMsg = geminiData.error?.message || JSON.stringify(geminiData);
+      return Response.json({ error: 'Gemini API error: ' + errMsg }, { status: 500 });
+    }
 
-    // Try to parse JSON from the response
+    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Parse JSON from response
     let extracted = {};
     try {
       const jsonMatch = text.match(/\{[\s\S]*?\}/);
@@ -69,7 +103,7 @@ JSON only, no other text:`;
         extracted = JSON.parse(jsonMatch[0]);
       }
     } catch {
-      extracted = { raw: text, description };
+      extracted = { raw: text };
     }
 
     // Normalize errors field
@@ -87,7 +121,6 @@ JSON only, no other text:`;
     return Response.json({
       success: true,
       extracted,
-      description,
       message: extracted.denomination
         ? `I found a $${extracted.denomination} note! Review the details and make any corrections.`
         : 'I analyzed the photo. Please review and fill in any missing details.',
