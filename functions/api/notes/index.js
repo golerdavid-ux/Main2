@@ -24,7 +24,8 @@ export async function onRequestGet(context) {
     gradingComments: row.grading_comments,
     estimatedValue: row.estimated_value,
     costPaid: row.cost_paid,
-    photoKey: row.photo_key,
+    photoFrontKey: row.photo_front_key,
+    photoBackKey: row.photo_back_key,
     flags: JSON.parse(row.flags || '[]'),
     notes: row.user_notes,
     dateAdded: row.date_added,
@@ -34,21 +35,24 @@ export async function onRequestGet(context) {
 }
 
 /**
- * POST /api/notes — add a new note (multipart form with optional photo)
+ * POST /api/notes — add a new note (multipart form with optional front/back photos)
  */
 export async function onRequestPost(context) {
   try {
     const id = generateId();
     let noteData = {};
-    let photoFile = null;
+    let photoFrontFile = null;
+    let photoBackFile = null;
 
     const contentType = context.request.headers.get('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await context.request.formData();
       for (const [key, value] of formData.entries()) {
-        if (key === 'photo' && value instanceof File) {
-          photoFile = value;
+        if (key === 'photoFront' && value instanceof File) {
+          photoFrontFile = value;
+        } else if (key === 'photoBack' && value instanceof File) {
+          photoBackFile = value;
         } else {
           noteData[key] = value;
         }
@@ -69,12 +73,22 @@ export async function onRequestPost(context) {
       errors,
     });
 
-    let photoKey = '';
-    if (photoFile && context.env.PHOTOS) {
-      const ext = photoFile.name.split('.').pop() || 'jpg';
-      photoKey = `notes/${id}.${ext}`;
-      await context.env.PHOTOS.put(photoKey, photoFile.stream(), {
-        httpMetadata: { contentType: photoFile.type },
+    let photoFrontKey = '';
+    let photoBackKey = '';
+
+    if (photoFrontFile && context.env.PHOTOS) {
+      const ext = photoFrontFile.name.split('.').pop() || 'jpg';
+      photoFrontKey = `notes/${id}-front.${ext}`;
+      await context.env.PHOTOS.put(photoFrontKey, photoFrontFile.stream(), {
+        httpMetadata: { contentType: photoFrontFile.type },
+      });
+    }
+
+    if (photoBackFile && context.env.PHOTOS) {
+      const ext = photoBackFile.name.split('.').pop() || 'jpg';
+      photoBackKey = `notes/${id}-back.${ext}`;
+      await context.env.PHOTOS.put(photoBackKey, photoBackFile.stream(), {
+        httpMetadata: { contentType: photoBackFile.type },
       });
     }
 
@@ -85,9 +99,9 @@ export async function onRequestPost(context) {
       INSERT INTO notes (id, denomination, series_year, serial_number,
         treasurer_signature, secretary_signature, friedberg_number,
         is_star_note, fancy_serials, errors, grade, grader, cert_number,
-        grading_comments, estimated_value, cost_paid, photo_key, flags,
-        user_notes, date_added)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        grading_comments, estimated_value, cost_paid, photo_front_key,
+        photo_back_key, flags, user_notes, date_added)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       noteData.denomination || '',
@@ -105,7 +119,8 @@ export async function onRequestPost(context) {
       noteData.gradingComments || '',
       noteData.estimatedValue || '',
       noteData.costPaid || '',
-      photoKey,
+      photoFrontKey,
+      photoBackKey,
       JSON.stringify(analysis.flags),
       noteData.notes || '',
       now,

@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS notes (
   grading_comments TEXT DEFAULT '',
   estimated_value TEXT DEFAULT '',
   cost_paid TEXT DEFAULT '',
-  photo_key TEXT DEFAULT '',
+  photo_front_key TEXT DEFAULT '',
+  photo_back_key TEXT DEFAULT '',
   flags TEXT DEFAULT '[]',
   user_notes TEXT DEFAULT '',
   date_added TEXT NOT NULL

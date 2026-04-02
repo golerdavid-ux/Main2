@@ -18,7 +18,8 @@ function rowToNote(row) {
     gradingComments: row.grading_comments,
     estimatedValue: row.estimated_value,
     costPaid: row.cost_paid,
-    photoKey: row.photo_key,
+    photoFrontKey: row.photo_front_key,
+    photoBackKey: row.photo_back_key,
     flags: JSON.parse(row.flags || '[]'),
     notes: row.user_notes,
     dateAdded: row.date_added,
@@ -45,14 +46,17 @@ export async function onRequestPut(context) {
     if (!existing) return Response.json({ error: 'Note not found' }, { status: 404 });
 
     let updates = {};
-    let photoFile = null;
+    let photoFrontFile = null;
+    let photoBackFile = null;
     const contentType = context.request.headers.get('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await context.request.formData();
       for (const [key, value] of formData.entries()) {
-        if (key === 'photo' && value instanceof File) {
-          photoFile = value;
+        if (key === 'photoFront' && value instanceof File) {
+          photoFrontFile = value;
+        } else if (key === 'photoBack' && value instanceof File) {
+          photoBackFile = value;
         } else {
           updates[key] = value;
         }
@@ -72,12 +76,22 @@ export async function onRequestPut(context) {
 
     const analysis = analyzeNote({ denomination, seriesYear, serial_number: serialNumber, errors });
 
-    let photoKey = existing.photo_key;
-    if (photoFile && context.env.PHOTOS) {
-      const ext = photoFile.name.split('.').pop() || 'jpg';
-      photoKey = `notes/${id}.${ext}`;
-      await context.env.PHOTOS.put(photoKey, photoFile.stream(), {
-        httpMetadata: { contentType: photoFile.type },
+    let photoFrontKey = existing.photo_front_key;
+    let photoBackKey = existing.photo_back_key;
+
+    if (photoFrontFile && context.env.PHOTOS) {
+      const ext = photoFrontFile.name.split('.').pop() || 'jpg';
+      photoFrontKey = `notes/${id}-front.${ext}`;
+      await context.env.PHOTOS.put(photoFrontKey, photoFrontFile.stream(), {
+        httpMetadata: { contentType: photoFrontFile.type },
+      });
+    }
+
+    if (photoBackFile && context.env.PHOTOS) {
+      const ext = photoBackFile.name.split('.').pop() || 'jpg';
+      photoBackKey = `notes/${id}-back.${ext}`;
+      await context.env.PHOTOS.put(photoBackKey, photoBackFile.stream(), {
+        httpMetadata: { contentType: photoBackFile.type },
       });
     }
 
@@ -88,7 +102,7 @@ export async function onRequestPut(context) {
         treasurer_signature=?, secretary_signature=?, friedberg_number=?,
         is_star_note=?, fancy_serials=?, errors=?, grade=?, grader=?,
         cert_number=?, grading_comments=?, estimated_value=?, cost_paid=?,
-        photo_key=?, flags=?, user_notes=?
+        photo_front_key=?, photo_back_key=?, flags=?, user_notes=?
       WHERE id=?
     `).bind(
       denomination,
@@ -106,7 +120,8 @@ export async function onRequestPut(context) {
       updates.gradingComments || existing.grading_comments,
       updates.estimatedValue || existing.estimated_value,
       updates.costPaid || existing.cost_paid,
-      photoKey,
+      photoFrontKey,
+      photoBackKey,
       JSON.stringify(analysis.flags),
       updates.notes || existing.user_notes,
       id,
@@ -126,9 +141,14 @@ export async function onRequestDelete(context) {
   const existing = await context.env.DB.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first();
   if (!existing) return Response.json({ error: 'Note not found' }, { status: 404 });
 
-  // Delete photo from R2 if exists
-  if (existing.photo_key && context.env.PHOTOS) {
-    try { await context.env.PHOTOS.delete(existing.photo_key); } catch {}
+  // Delete photos from R2 if they exist
+  if (context.env.PHOTOS) {
+    if (existing.photo_front_key) {
+      try { await context.env.PHOTOS.delete(existing.photo_front_key); } catch {}
+    }
+    if (existing.photo_back_key) {
+      try { await context.env.PHOTOS.delete(existing.photo_back_key); } catch {}
+    }
   }
 
   await context.env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(id).run();

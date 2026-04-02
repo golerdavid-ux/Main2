@@ -21,8 +21,10 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFront, setPhotoFront] = useState(null);
+  const [photoBack, setPhotoBack] = useState(null);
+  const [photoFrontPreview, setPhotoFrontPreview] = useState(null);
+  const [photoBackPreview, setPhotoBackPreview] = useState(null);
 
   const [formData, setFormData] = useState({
     denomination: '',
@@ -68,8 +70,10 @@ function App() {
       errors: [], grade: '', grader: '', certNumber: '',
       gradingComments: '', estimatedValue: '', costPaid: '', notes: '',
     });
-    setPhoto(null);
-    setPhotoPreview(null);
+    setPhotoFront(null);
+    setPhotoBack(null);
+    setPhotoFrontPreview(null);
+    setPhotoBackPreview(null);
   };
 
   const handleInputChange = (e) => {
@@ -86,12 +90,13 @@ function App() {
     }));
   };
 
-  const scanPhoto = async (file) => {
+  const scanPhoto = async (file, side) => {
     setScanning(true);
-    showMessage('Scanning your note... hang tight!', 'info');
+    showMessage(`Scanning the ${side} of your note... hang tight!`, 'info');
     try {
       const body = new FormData();
       body.append('photo', file);
+      body.append('side', side);
 
       const response = await fetch(`${API_BASE_URL}/api/notes/scan`, {
         method: 'POST',
@@ -122,7 +127,7 @@ function App() {
           }), 500);
         }
       } else {
-        showMessage(data.error || 'Could not read the note. Try a clearer photo with more light.', 'error');
+        showMessage(data.error || 'That one is a little hard to read! Could you try a closer photo with more light?', 'error');
       }
     } catch (error) {
       showMessage('Photo scan failed. You can still enter details manually.', 'error');
@@ -131,14 +136,19 @@ function App() {
     }
   };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = (side) => (e) => {
     const file = e.target.files[0];
     if (file) {
-      setPhoto(file);
       const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result);
+      if (side === 'front') {
+        setPhotoFront(file);
+        reader.onloadend = () => setPhotoFrontPreview(reader.result);
+      } else {
+        setPhotoBack(file);
+        reader.onloadend = () => setPhotoBackPreview(reader.result);
+      }
       reader.readAsDataURL(file);
-      scanPhoto(file);
+      scanPhoto(file, side);
     }
   };
 
@@ -193,7 +203,8 @@ function App() {
           body.append(key, value);
         }
       });
-      if (photo) body.append('photo', photo);
+      if (photoFront) body.append('photoFront', photoFront);
+      if (photoBack) body.append('photoBack', photoBack);
 
       const response = await fetch(`${API_BASE_URL}/api/notes`, {
         method: 'POST',
@@ -267,12 +278,26 @@ function App() {
         </div>
 
         <div className="detail-grid">
-          {n.photoKey && (
-            <div className="detail-photo">
-              <img
-                src={`${API_BASE_URL}/api/photos/${n.photoKey.replace('notes/', '')}`}
-                alt={`$${n.denomination} Series ${n.seriesYear}`}
-              />
+          {(n.photoFrontKey || n.photoBackKey) && (
+            <div className="detail-photos">
+              {n.photoFrontKey && (
+                <div className="detail-photo">
+                  <span className="photo-label">Front</span>
+                  <img
+                    src={`${API_BASE_URL}/api/photos/${n.photoFrontKey.replace('notes/', '')}`}
+                    alt={`$${n.denomination} Front`}
+                  />
+                </div>
+              )}
+              {n.photoBackKey && (
+                <div className="detail-photo">
+                  <span className="photo-label">Back</span>
+                  <img
+                    src={`${API_BASE_URL}/api/photos/${n.photoBackKey.replace('notes/', '')}`}
+                    alt={`$${n.denomination} Back`}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -343,28 +368,54 @@ function App() {
       <form onSubmit={handleSubmit}>
         {/* Photo Upload */}
         <div className="section">
-          <h3>Photo</h3>
-          <div className="photo-upload-area">
-            {photoPreview ? (
-              <div className="photo-preview">
-                <img src={photoPreview} alt="Note preview" />
-                {scanning && <div className="scanning-overlay">Scanning...</div>}
-                {!scanning && (
-                  <button type="button" className="btn-remove-photo" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
-                    Remove Photo
-                  </button>
-                )}
-              </div>
-            ) : (
-              <label className="upload-label">
-                <input type="file" accept="image/*" onChange={handlePhotoChange} hidden />
-                <div className="upload-placeholder">
-                  <span className="upload-icon">+</span>
-                  <span>Upload a photo of your note</span>
-                  <span className="upload-hint">I'll scan it and fill in the details automatically</span>
+          <h3>Photos</h3>
+          <div className="photo-upload-row">
+            <div className="photo-upload-area">
+              <label className="photo-side-label">Front</label>
+              {photoFrontPreview ? (
+                <div className="photo-preview">
+                  <img src={photoFrontPreview} alt="Note front" />
+                  {scanning && <div className="scanning-overlay">Scanning...</div>}
+                  {!scanning && (
+                    <button type="button" className="btn-remove-photo" onClick={() => { setPhotoFront(null); setPhotoFrontPreview(null); }}>
+                      Remove
+                    </button>
+                  )}
                 </div>
-              </label>
-            )}
+              ) : (
+                <label className="upload-label">
+                  <input type="file" accept="image/*" onChange={handlePhotoChange('front')} hidden />
+                  <div className="upload-placeholder">
+                    <span className="upload-icon">+</span>
+                    <span>Front of note</span>
+                    <span className="upload-hint">I'll scan and fill details</span>
+                  </div>
+                </label>
+              )}
+            </div>
+            <div className="photo-upload-area">
+              <label className="photo-side-label">Back</label>
+              {photoBackPreview ? (
+                <div className="photo-preview">
+                  <img src={photoBackPreview} alt="Note back" />
+                  {scanning && <div className="scanning-overlay">Scanning...</div>}
+                  {!scanning && (
+                    <button type="button" className="btn-remove-photo" onClick={() => { setPhotoBack(null); setPhotoBackPreview(null); }}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <label className="upload-label">
+                  <input type="file" accept="image/*" onChange={handlePhotoChange('back')} hidden />
+                  <div className="upload-placeholder">
+                    <span className="upload-icon">+</span>
+                    <span>Back of note</span>
+                    <span className="upload-hint">Optional but helpful</span>
+                  </div>
+                </label>
+              )}
+            </div>
           </div>
         </div>
 
@@ -590,10 +641,10 @@ function App() {
               className="note-card"
               onClick={() => { setSelectedNote(note); setView('detail'); }}
             >
-              {note.photoKey ? (
+              {note.photoFrontKey ? (
                 <div className="card-photo">
                   <img
-                    src={`${API_BASE_URL}/api/photos/${note.photoKey.replace('notes/', '')}`}
+                    src={`${API_BASE_URL}/api/photos/${note.photoFrontKey.replace('notes/', '')}`}
                     alt={`$${note.denomination}`}
                   />
                 </div>

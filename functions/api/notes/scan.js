@@ -7,9 +7,12 @@ export async function onRequestPost(context) {
     const contentType = context.request.headers.get('content-type') || '';
     let imageBytes;
 
+    let side = 'front';
+
     if (contentType.includes('multipart/form-data')) {
       const formData = await context.request.formData();
       const file = formData.get('photo');
+      side = formData.get('side') || 'front';
       if (!file || !(file instanceof File)) {
         return Response.json({ error: 'No photo uploaded' }, { status: 400 });
       }
@@ -18,7 +21,7 @@ export async function onRequestPost(context) {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
 
-    const prompt = `You are analyzing a photo of a U.S. banknote (paper currency). Extract the following details from the note. Be precise and only report what you can clearly see.
+    const frontPrompt = `You are analyzing a photo of the FRONT (obverse) of a U.S. banknote (paper currency). Extract the following details. Be precise and only report what you can clearly see.
 
 Return ONLY a JSON object with these fields (use empty string "" if you cannot determine a field):
 {
@@ -32,6 +35,19 @@ Return ONLY a JSON object with these fields (use empty string "" if you cannot d
 }
 
 Return ONLY the JSON object, no other text.`;
+
+    const backPrompt = `You are analyzing a photo of the BACK (reverse) of a U.S. banknote (paper currency). Extract any details visible on this side. Be precise and only report what you can clearly see.
+
+Return ONLY a JSON object with these fields (use empty string "" if you cannot determine a field):
+{
+  "denomination": "the face value as a number if visible, e.g. 1, 5, 10, 20, 50, 100",
+  "errors": "any visible printing errors like miscut, misalignment, ink smear, inverted back, or empty array []",
+  "condition": "brief description of the note's physical condition from the back, e.g. crisp uncirculated, light fold, stains, heavily worn"
+}
+
+Return ONLY the JSON object, no other text.`;
+
+    const prompt = side === 'back' ? backPrompt : frontPrompt;
 
     const response = await context.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
       messages: [

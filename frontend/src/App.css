@@ -222,7 +222,9 @@ input:focus, textarea:focus, select:focus {
 textarea { resize: vertical; min-height: 60px; }
 
 /* Photo Upload */
-.photo-upload-area { margin-bottom: 10px; }
+.photo-upload-row { display: flex; gap: 16px; }
+.photo-upload-area { flex: 1; margin-bottom: 10px; }
+.photo-side-label { font-weight: 600; color: #1a472a; font-size: 0.9rem; margin-bottom: 8px; display: block; }
 .upload-label { cursor: pointer; display: block; }
 .upload-placeholder {
   border: 2px dashed #c5a44e;
@@ -380,6 +382,20 @@ textarea { resize: vertical; min-height: 60px; }
   gap: 24px;
   margin-bottom: 24px;
 }
+.detail-photos {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+.photo-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7c68;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
 .detail-photo {
   border-radius: 10px;
   overflow: hidden;
@@ -425,6 +441,7 @@ textarea { resize: vertical; min-height: 60px; }
   .stats-bar { flex-wrap: wrap; }
   .stat { min-width: 33%; margin-bottom: 8px; }
   .detail-grid { grid-template-columns: 1fr; }
+  .photo-upload-row { flex-direction: column; }
   .notes-grid { grid-template-columns: 1fr; }
   .actions { flex-direction: column; }
   .btn-primary, .btn-secondary { width: 100%; }
