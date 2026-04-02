@@ -1107,7 +1107,7 @@ function App() {
               Export CSV
             </button>
             <span className="header-divider">|</span>
-            <button className="btn-text" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setView('batch'); }}>
+            <button className="btn-text" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setBatchBackPhoto(null); setCropState(null); setView('batch'); }}>
               Batch Scan
             </button>
           </div>
@@ -1426,8 +1426,8 @@ function App() {
         {view === 'detail' && renderDetail()}
         {view === 'batch' && renderBatchView()}
 
-        {/* Crop Modal */}
-        {cropState && (
+        {/* Crop Modal - only for single add view */}
+        {cropState && view !== 'batch' && (
           <div className="crop-modal">
             <div className="crop-container">
               <Cropper
