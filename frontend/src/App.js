@@ -353,6 +353,69 @@ function App() {
     }
   };
 
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+
+  const startEditing = (note) => {
+    setEditData({
+      denomination: note.denomination || '',
+      seriesYear: note.seriesYear || '',
+      serialNumber: note.serialNumber || '',
+      treasurerSignature: note.treasurerSignature || '',
+      secretarySignature: note.secretarySignature || '',
+      friedbergNumber: note.friedbergNumber || '',
+      grade: note.grade || '',
+      grader: note.grader || '',
+      certNumber: note.certNumber || '',
+      gradingComments: note.gradingComments || '',
+      estimatedValue: note.estimatedValue || '',
+      costPaid: note.costPaid || '',
+      notes: note.notes || '',
+    });
+    setEditing(true);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditSave = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notes/${selectedNote.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditing(false);
+        showMessage('Note updated! Syncing to Google Sheets...', 'success');
+        await fetchNotes();
+        // Re-fetch the updated note for detail view
+        try {
+          const noteRes = await fetch(`${API_BASE_URL}/api/notes/${selectedNote.id}`);
+          const updatedNote = await noteRes.json();
+          setSelectedNote(updatedNote);
+        } catch {}
+        // Auto-sync to Google Sheets
+        try {
+          await fetch(`${API_BASE_URL}/api/notes/sync-sheets`, { method: 'POST' });
+          showMessage('Note updated and synced to Google Sheets!', 'success');
+        } catch {
+          showMessage('Note updated but sheet sync failed. Try manual sync.', 'info');
+        }
+      } else {
+        showMessage(data.error || 'Failed to update note', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to update: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [syncing, setSyncing] = useState(false);
 
   const handleSyncSheets = async () => {
@@ -400,7 +463,7 @@ function App() {
     const n = selectedNote;
     return (
       <div className="detail-view">
-        <button className="btn-secondary" onClick={() => setView('collection')} style={{ marginBottom: 16 }}>
+        <button className="btn-secondary" onClick={() => { setView('collection'); setEditing(false); }} style={{ marginBottom: 16 }}>
           &larr; Back to Collection
         </button>
         <div className="detail-header">
@@ -408,81 +471,183 @@ function App() {
           {n.isStarNote && <span className="star-badge">Star Note</span>}
         </div>
 
-        <div className="detail-grid">
-          {(n.hasPhotoFront || n.hasPhotoBack) && (
-            <div className="detail-photos">
-              {n.hasPhotoFront && (
-                <div className="detail-photo">
-                  <span className="photo-label">Front</span>
-                  <img
-                    src={`${API_BASE_URL}/api/photos/note/${n.id}/front`}
-                    alt={`$${n.denomination} Front`}
-                  />
-                </div>
-              )}
-              {n.hasPhotoBack && (
-                <div className="detail-photo">
-                  <span className="photo-label">Back</span>
-                  <img
-                    src={`${API_BASE_URL}/api/photos/note/${n.id}/back`}
-                    alt={`$${n.denomination} Back`}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="detail-info">
-            <div className="info-section">
-              <h3>Identification</h3>
-              <div className="info-row"><span>Serial Number:</span><span>{n.serialNumber || 'N/A'}</span></div>
-              <div className="info-row"><span>Friedberg #:</span><span>{n.friedbergNumber || 'N/A'}</span></div>
-              <div className="info-row"><span>Treasurer:</span><span>{n.treasurerSignature || 'N/A'}</span></div>
-              <div className="info-row"><span>Secretary:</span><span>{n.secretarySignature || 'N/A'}</span></div>
-            </div>
-
-            {(n.grade || n.grader) && (
-              <div className="info-section">
-                <h3>Grading</h3>
-                <div className="info-row"><span>Grader:</span><span>{n.grader}</span></div>
-                <div className="info-row"><span>Grade:</span><span>{n.grade}</span></div>
-                {n.certNumber && <div className="info-row"><span>Cert #:</span><span>{n.certNumber}</span></div>}
-                {n.gradingComments && <div className="info-row"><span>Comments:</span><span>{n.gradingComments}</span></div>}
+        {(n.hasPhotoFront || n.hasPhotoBack) && (
+          <div className="detail-photos" style={{ marginBottom: 20 }}>
+            {n.hasPhotoFront && (
+              <div className="detail-photo">
+                <span className="photo-label">Front</span>
+                <img
+                  src={`${API_BASE_URL}/api/photos/note/${n.id}/front`}
+                  alt={`$${n.denomination} Front`}
+                />
               </div>
             )}
-
-            <div className="info-section">
-              <h3>Value</h3>
-              <div className="info-row"><span>Estimated Value:</span><span>{n.estimatedValue ? `$${n.estimatedValue}` : 'N/A'}</span></div>
-              <div className="info-row"><span>Cost Paid:</span><span>{n.costPaid ? `$${n.costPaid}` : 'N/A'}</span></div>
-            </div>
-
-            {n.flags && n.flags.length > 0 && (
-              <div className="info-section">
-                <h3>Special Features</h3>
-                <div className="flags-list">
-                  {n.flags.map((flag, i) => (
-                    <span key={i} className="flag-tag">{flag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {n.notes && (
-              <div className="info-section">
-                <h3>Notes</h3>
-                <p>{n.notes}</p>
+            {n.hasPhotoBack && (
+              <div className="detail-photo">
+                <span className="photo-label">Back</span>
+                <img
+                  src={`${API_BASE_URL}/api/photos/note/${n.id}/back`}
+                  alt={`$${n.denomination} Back`}
+                />
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        <div className="detail-footer">
-          <span className="date-added">Added: {new Date(n.dateAdded).toLocaleDateString()}</span>
-          <button className="btn-danger" onClick={() => handleDelete(n.id)}>
-            Remove from Collection
-          </button>
-        </div>
+        {!editing ? (
+          <>
+            <div className="detail-info">
+              <div className="info-section">
+                <h3>Identification</h3>
+                <div className="info-row"><span>Serial Number:</span><span>{n.serialNumber || 'N/A'}</span></div>
+                <div className="info-row"><span>Friedberg #:</span><span>{n.friedbergNumber || 'N/A'}</span></div>
+                <div className="info-row"><span>Treasurer:</span><span>{n.treasurerSignature || 'N/A'}</span></div>
+                <div className="info-row"><span>Secretary:</span><span>{n.secretarySignature || 'N/A'}</span></div>
+              </div>
+
+              {(n.grade || n.grader) && (
+                <div className="info-section">
+                  <h3>Grading</h3>
+                  <div className="info-row"><span>Grader:</span><span>{n.grader}</span></div>
+                  <div className="info-row"><span>Grade:</span><span>{n.grade}</span></div>
+                  {n.certNumber && <div className="info-row"><span>Cert #:</span><span>{n.certNumber}</span></div>}
+                  {n.gradingComments && <div className="info-row"><span>Comments:</span><span>{n.gradingComments}</span></div>}
+                </div>
+              )}
+
+              <div className="info-section">
+                <h3>Value</h3>
+                <div className="info-row"><span>Estimated Value:</span><span>{n.estimatedValue ? `$${n.estimatedValue}` : 'N/A'}</span></div>
+                <div className="info-row"><span>Cost Paid:</span><span>{n.costPaid ? `$${n.costPaid}` : 'N/A'}</span></div>
+              </div>
+
+              {n.flags && n.flags.length > 0 && (
+                <div className="info-section">
+                  <h3>Special Features</h3>
+                  <div className="flags-list">
+                    {n.flags.map((flag, i) => (
+                      <span key={i} className="flag-tag">{flag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {n.notes && (
+                <div className="info-section">
+                  <h3>Notes</h3>
+                  <p>{n.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="detail-footer">
+              <span className="date-added">Added: {new Date(n.dateAdded).toLocaleDateString()}</span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn-primary" onClick={() => startEditing(n)}>
+                  Edit
+                </button>
+                <button className="btn-danger" onClick={() => handleDelete(n.id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="edit-form">
+            <div className="section">
+              <h3>Identification</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Denomination</label>
+                  <input name="denomination" value={editData.denomination} onChange={handleEditChange} />
+                </div>
+                <div className="form-group">
+                  <label>Series Year</label>
+                  <input name="seriesYear" value={editData.seriesYear} onChange={handleEditChange} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Serial Number</label>
+                  <input name="serialNumber" value={editData.serialNumber} onChange={handleEditChange} />
+                </div>
+                <div className="form-group">
+                  <label>Friedberg #</label>
+                  <input name="friedbergNumber" value={editData.friedbergNumber} onChange={handleEditChange} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Treasurer</label>
+                  <input name="treasurerSignature" value={editData.treasurerSignature} onChange={handleEditChange} />
+                </div>
+                <div className="form-group">
+                  <label>Secretary</label>
+                  <input name="secretarySignature" value={editData.secretarySignature} onChange={handleEditChange} />
+                </div>
+              </div>
+            </div>
+
+            <div className="section">
+              <h3>Grading</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Grader</label>
+                  <select name="grader" value={editData.grader} onChange={handleEditChange}>
+                    <option value="">Ungraded</option>
+                    <option value="PMG">PMG</option>
+                    <option value="PCGS">PCGS</option>
+                    <option value="CGC">CGC</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Grade</label>
+                  <input name="grade" value={editData.grade} onChange={handleEditChange} placeholder="e.g., 66 EPQ" />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Cert #</label>
+                  <input name="certNumber" value={editData.certNumber} onChange={handleEditChange} />
+                </div>
+                <div className="form-group">
+                  <label>Grading Comments</label>
+                  <input name="gradingComments" value={editData.gradingComments} onChange={handleEditChange} />
+                </div>
+              </div>
+            </div>
+
+            <div className="section">
+              <h3>Value</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Estimated Value ($)</label>
+                  <input name="estimatedValue" type="number" step="0.01" min="0" value={editData.estimatedValue} onChange={handleEditChange} />
+                </div>
+                <div className="form-group">
+                  <label>Cost Paid ($)</label>
+                  <input name="costPaid" type="number" step="0.01" min="0" value={editData.costPaid} onChange={handleEditChange} />
+                </div>
+              </div>
+            </div>
+
+            <div className="section">
+              <div className="form-group">
+                <label>Notes / Comments</label>
+                <textarea name="notes" value={editData.notes} onChange={handleEditChange} rows="3" />
+              </div>
+            </div>
+
+            <div className="actions">
+              <button className="btn-secondary" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleEditSave} disabled={loading}>
+                {loading ? 'Saving...' : 'Save & Sync'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
