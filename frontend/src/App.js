@@ -327,8 +327,8 @@ function App() {
     const n = selectedNote;
     return (
       <div className="detail-view">
-        <button className="btn-back" onClick={() => setView('collection')}>
-          Back to Collection
+        <button className="btn-secondary" onClick={() => setView('collection')} style={{ marginBottom: 16 }}>
+          &larr; Back to Collection
         </button>
         <div className="detail-header">
           <h2>${n.denomination} - Series {n.seriesYear}</h2>
