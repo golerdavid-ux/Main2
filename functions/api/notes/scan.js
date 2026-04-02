@@ -24,7 +24,12 @@ export async function onRequestPost(context) {
       }
       mimeType = file.type || 'image/jpeg';
       const buffer = await file.arrayBuffer();
-      imageBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      imageBase64 = btoa(binary);
     } else {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
