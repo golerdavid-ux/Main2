@@ -49,7 +49,8 @@ Return ONLY a valid JSON object with these fields (use empty string "" if you ca
   "certNumber": "the certification/serial number on the grading label. Empty string if raw.",
   "gradingComments": "any additional text on the grading label like note description. Empty string if none.",
   "errors": [],
-  "condition": "brief description of the note's physical condition"
+  "condition": "brief description of the note's physical condition",
+  "estimatedValue": "your best estimate of the note's current market value as a number (no $ sign). Consider denomination, series year, note type, condition, star note status, fancy serial patterns, errors, and grading. For common circulated modern FRNs, value is close to face value. For uncirculated, star notes, older series, silver/gold certificates, errors, or fancy serials, value can be significantly higher. Return just the number, e.g. 1.50 or 250 or 5000."
 }
 
 IMPORTANT: Read the serial number character by character. Include the prefix letter(s), all 8 digits, and the suffix letter. If there is a star (*) symbol, include it.

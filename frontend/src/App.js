@@ -147,6 +147,7 @@ function App() {
           grade: ext.grade || prev.grade,
           certNumber: ext.certNumber || prev.certNumber,
           gradingComments: ext.gradingComments || prev.gradingComments,
+          estimatedValue: ext.estimatedValue || prev.estimatedValue,
           errors: (ext.errors && ext.errors.length > 0) ? ext.errors : prev.errors,
         }));
         showMessage(data.message, 'success');

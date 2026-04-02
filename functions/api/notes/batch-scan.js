@@ -47,7 +47,8 @@ Return ONLY a valid JSON array where each element represents one banknote:
     "grade": "numeric grade from slab label. Empty string if raw.",
     "certNumber": "certification number from slab. Empty string if raw.",
     "errors": [],
-    "condition": "brief condition description"
+    "condition": "brief condition description",
+    "estimatedValue": "estimated market value as a number (no $ sign). Consider denomination, condition, series, note type, star notes, fancy serials, errors. Common circulated modern FRNs = close to face value. Uncirculated, older, star notes, errors = higher."
   }
 ]
 
