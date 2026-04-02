@@ -8,9 +8,9 @@ pages_build_output_dir = "frontend/build"
 [[d1_databases]]
 binding = "DB"
 database_name = "money-book-db"
-database_id = "" # Will be filled by deploy script
+database_id = "8c9878a2-fc23-47b1-a47d-41112eff9736"
 
-# R2 Bucket binding for photo storage
-[[r2_buckets]]
-binding = "PHOTOS"
-bucket_name = "money-book-photos"
+# R2 Bucket binding for photo storage (add after creating the bucket)
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "money-book-photos"
