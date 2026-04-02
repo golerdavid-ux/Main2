@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 
-const { generateInvoicePDF } = require('./services/pdfGenerator');
-const { sendInvoiceEmail } = require('./services/emailService');
+const currencyService = require('./services/currencyService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,212 +14,166 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Create temp directory for PDFs if it doesn't exist
-const tempDir = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir);
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
 }
 
-// Load products
-const productsPath = path.join(__dirname, 'products.json');
-let productsData = { products: [] };
+// Serve uploaded photos statically
+app.use('/uploads', express.static(uploadsDir));
 
-try {
-  const data = fs.readFileSync(productsPath, 'utf8');
-  productsData = JSON.parse(data);
-} catch (error) {
-  console.error('Error loading products:', error);
-}
-
-/**
- * GET /api/products
- * Get all available products with their rates
- */
-app.get('/api/products', (req, res) => {
-  res.json(productsData);
+// Configure multer for photo uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `note-${uuidv4()}${ext}`);
+  },
 });
 
-/**
- * POST /api/invoice/generate
- * Generate and email an invoice
- */
-app.post('/api/invoice/generate', async (req, res) => {
-  try {
-    const {
-      customerName,
-      customerEmail,
-      customerAddress,
-      items,
-      invoiceNumber,
-      date,
-      dueDate,
-      taxRate,
-      notes,
-    } = req.body;
-
-    // Validate required fields
-    if (!customerName || !customerEmail || !items || items.length === 0) {
-      return res.status(400).json({
-        error: 'Missing required fields: customerName, customerEmail, and items are required',
-      });
-    }
-
-    // Generate unique invoice number if not provided
-    const finalInvoiceNumber = invoiceNumber || `INV-${Date.now()}`;
-    const invoiceDate = date || new Date().toISOString().split('T')[0];
-
-    // Calculate total
-    let subtotal = 0;
-    items.forEach(item => {
-      subtotal += item.quantity * item.rate;
-    });
-    const tax = taxRate ? (subtotal * taxRate / 100) : 0;
-    const total = subtotal + tax;
-
-    // Prepare invoice data
-    const invoiceData = {
-      businessName: process.env.BUSINESS_NAME,
-      businessAddress: process.env.BUSINESS_ADDRESS,
-      businessPhone: process.env.BUSINESS_PHONE,
-      businessEmail: process.env.BUSINESS_EMAIL,
-      customerName,
-      customerEmail,
-      customerAddress,
-      items,
-      invoiceNumber: finalInvoiceNumber,
-      date: invoiceDate,
-      dueDate,
-      taxRate,
-      notes,
-    };
-
-    // Generate PDF
-    const pdfFileName = `invoice-${finalInvoiceNumber}-${Date.now()}.pdf`;
-    const pdfPath = path.join(tempDir, pdfFileName);
-
-    await generateInvoicePDF(invoiceData, pdfPath);
-
-    // Send email
-    const emailData = {
-      to: customerEmail,
-      customerName,
-      invoiceNumber: finalInvoiceNumber,
-      date: invoiceDate,
-      total,
-      message: notes,
-    };
-
-    const emailResult = await sendInvoiceEmail(emailData, pdfPath);
-
-    // Clean up PDF file after sending
-    setTimeout(() => {
-      try {
-        if (fs.existsSync(pdfPath)) {
-          fs.unlinkSync(pdfPath);
-        }
-      } catch (err) {
-        console.error('Error deleting PDF:', err);
-      }
-    }, 5000);
-
-    if (emailResult.success) {
-      res.json({
-        success: true,
-        message: 'Invoice generated and sent successfully',
-        invoiceNumber: finalInvoiceNumber,
-        total: total.toFixed(2),
-      });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|heic/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) {
+      cb(null, true);
     } else {
-      res.status(500).json({
-        success: false,
-        error: 'Invoice generated but failed to send email: ' + emailResult.error,
-      });
+      cb(new Error('Only image files are allowed'));
     }
-
-  } catch (error) {
-    console.error('Error generating invoice:', error);
-    res.status(500).json({
-      error: 'Failed to generate invoice: ' + error.message,
-    });
-  }
+  },
 });
 
-/**
- * POST /api/invoice/preview
- * Generate a preview PDF without sending email
- */
-app.post('/api/invoice/preview', async (req, res) => {
-  try {
-    const {
-      customerName,
-      customerEmail,
-      customerAddress,
-      items,
-      invoiceNumber,
-      date,
-      dueDate,
-      taxRate,
-      notes,
-    } = req.body;
-
-    const finalInvoiceNumber = invoiceNumber || `INV-PREVIEW-${Date.now()}`;
-    const invoiceDate = date || new Date().toISOString().split('T')[0];
-
-    const invoiceData = {
-      businessName: process.env.BUSINESS_NAME,
-      businessAddress: process.env.BUSINESS_ADDRESS,
-      businessPhone: process.env.BUSINESS_PHONE,
-      businessEmail: process.env.BUSINESS_EMAIL,
-      customerName: customerName || 'Customer Name',
-      customerEmail: customerEmail || 'customer@example.com',
-      customerAddress,
-      items: items || [],
-      invoiceNumber: finalInvoiceNumber,
-      date: invoiceDate,
-      dueDate,
-      taxRate,
-      notes,
-    };
-
-    const pdfFileName = `preview-${Date.now()}.pdf`;
-    const pdfPath = path.join(tempDir, pdfFileName);
-
-    await generateInvoicePDF(invoiceData, pdfPath);
-
-    // Send the PDF file
-    res.download(pdfPath, `invoice-preview.pdf`, (err) => {
-      if (err) {
-        console.error('Error sending preview:', err);
-      }
-      // Clean up
-      setTimeout(() => {
-        try {
-          if (fs.existsSync(pdfPath)) {
-            fs.unlinkSync(pdfPath);
-          }
-        } catch (err) {
-          console.error('Error deleting preview PDF:', err);
-        }
-      }, 1000);
-    });
-
-  } catch (error) {
-    console.error('Error generating preview:', error);
-    res.status(500).json({
-      error: 'Failed to generate preview: ' + error.message,
-    });
-  }
-});
+// ─── API Routes ──────────────────────────────────────────────
 
 /**
- * Health check endpoint
+ * GET /api/health
  */
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Invoice Generator API is running' });
+  res.json({ status: 'ok', message: 'Money Book API is running' });
+});
+
+/**
+ * GET /api/notes
+ * Get all banknotes in the money book.
+ */
+app.get('/api/notes', (req, res) => {
+  const notes = currencyService.getAllNotes();
+  res.json({ notes, count: notes.length });
+});
+
+/**
+ * GET /api/notes/:id
+ * Get a single banknote by ID.
+ */
+app.get('/api/notes/:id', (req, res) => {
+  const note = currencyService.getNoteById(req.params.id);
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  res.json(note);
+});
+
+/**
+ * POST /api/notes
+ * Add a new banknote. Optionally upload a photo.
+ */
+app.post('/api/notes', upload.single('photo'), (req, res) => {
+  try {
+    const id = uuidv4();
+    const noteData = {
+      id,
+      ...req.body,
+    };
+
+    // Parse errors array if sent as JSON string
+    if (typeof noteData.errors === 'string') {
+      try {
+        noteData.errors = JSON.parse(noteData.errors);
+      } catch {
+        noteData.errors = noteData.errors ? [noteData.errors] : [];
+      }
+    }
+
+    if (req.file) {
+      noteData.photoFilename = req.file.filename;
+    }
+
+    const note = currencyService.addNote(noteData);
+    res.status(201).json({
+      success: true,
+      message: "That's another one for your collection! I've put it in your Money Book for you.",
+      note,
+    });
+  } catch (error) {
+    console.error('Error adding note:', error);
+    res.status(500).json({ error: 'Failed to add note: ' + error.message });
+  }
+});
+
+/**
+ * PUT /api/notes/:id
+ * Update a banknote.
+ */
+app.put('/api/notes/:id', upload.single('photo'), (req, res) => {
+  try {
+    const updates = { ...req.body };
+
+    if (typeof updates.errors === 'string') {
+      try {
+        updates.errors = JSON.parse(updates.errors);
+      } catch {
+        updates.errors = updates.errors ? [updates.errors] : [];
+      }
+    }
+
+    if (req.file) {
+      updates.photoFilename = req.file.filename;
+    }
+
+    const note = currencyService.updateNote(req.params.id, updates);
+    if (!note) return res.status(404).json({ error: 'Note not found' });
+    res.json({ success: true, note });
+  } catch (error) {
+    console.error('Error updating note:', error);
+    res.status(500).json({ error: 'Failed to update note: ' + error.message });
+  }
+});
+
+/**
+ * DELETE /api/notes/:id
+ * Delete a banknote.
+ */
+app.delete('/api/notes/:id', (req, res) => {
+  const deleted = currencyService.deleteNote(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Note not found' });
+  res.json({ success: true, message: 'Note deleted' });
+});
+
+/**
+ * POST /api/notes/analyze
+ * Analyze a serial number / note details without saving.
+ */
+app.post('/api/notes/analyze', (req, res) => {
+  const analysis = currencyService.analyzeNote(req.body);
+  res.json(analysis);
+});
+
+/**
+ * GET /api/notes/export/csv
+ * Export the full money book as CSV.
+ */
+app.get('/api/notes/export/csv', (req, res) => {
+  const csv = currencyService.exportCSV();
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="MoneyBook.csv"');
+  res.send(csv);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Invoice Generator API running on port ${PORT}`);
-  console.log(`Products loaded: ${productsData.products.length}`);
+  console.log(`Money Book API running on port ${PORT}`);
+  const notes = currencyService.getAllNotes();
+  console.log(`Collection loaded: ${notes.length} notes`);
 });

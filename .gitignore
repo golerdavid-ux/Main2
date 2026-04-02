@@ -25,3 +25,7 @@ Thumbs.db
 
 # Generated files
 *.pdf
+
+# Uploads (keep directory, ignore contents)
+backend/uploads/*
+!backend/uploads/.gitkeep
