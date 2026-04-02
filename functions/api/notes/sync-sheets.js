@@ -21,8 +21,9 @@ async function getAccessToken(email, privateKey) {
     iat: now,
   }));
 
-  // Import the private key
+  // Import the private key — handle literal \n from env vars
   const pemBody = privateKey
+    .replace(/\\n/g, '\n')
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
     .replace(/\s/g, '');
