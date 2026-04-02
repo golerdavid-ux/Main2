@@ -22,6 +22,8 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [batchNotes, setBatchNotes] = useState([]);
   const [batchPhoto, setBatchPhoto] = useState(null);
+  const [batchBackPhoto, setBatchBackPhoto] = useState(null);
+  const [batchBackScanning, setBatchBackScanning] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [photoFront, setPhotoFront] = useState(null);
@@ -326,10 +328,17 @@ function App() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        showMessage(data.message, 'success');
+        showMessage('Note added! Syncing to Google Sheets...', 'success');
         resetForm();
         setView('collection');
-        fetchNotes();
+        await fetchNotes();
+        // Auto-sync to Google Sheets
+        try {
+          await fetch(`${API_BASE_URL}/api/notes/sync-sheets`, { method: 'POST' });
+          showMessage('Note added and synced to Google Sheets!', 'success');
+        } catch {
+          showMessage('Note added but sheet sync failed. Try manual sync.', 'info');
+        }
       } else {
         showMessage(data.error || 'Failed to add note', 'error');
       }
@@ -397,6 +406,47 @@ function App() {
     ));
   };
 
+  const handleBatchBackPhoto = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBatchBackPhoto(URL.createObjectURL(file));
+    setBatchBackScanning(true);
+    showMessage('Scanning backs for additional details...', 'info');
+    try {
+      const resized = await resizeImage(file, 2048);
+      const body = new FormData();
+      body.append('photo', resized);
+      const response = await fetch(`${API_BASE_URL}/api/notes/batch-scan-back`, {
+        method: 'POST',
+        body,
+      });
+      const data = await response.json();
+      if (data.success && data.notes) {
+        // Merge back scan data into existing batch notes by index
+        setBatchNotes(prev => prev.map((note, i) => {
+          const backData = data.notes[i];
+          if (!backData) return note;
+          // Merge errors from back scan
+          const existingErrors = note.errors || [];
+          const backErrors = backData.errors || [];
+          const mergedErrors = [...new Set([...existingErrors, ...backErrors])];
+          return {
+            ...note,
+            errors: mergedErrors,
+            condition: backData.condition && !note.condition ? backData.condition : note.condition,
+          };
+        }));
+        showMessage(`Back scan complete! Merged details for ${data.notes.length} note(s).`, 'success');
+      } else {
+        showMessage(data.error || 'Could not scan backs. Try a clearer photo.', 'error');
+      }
+    } catch (error) {
+      showMessage('Back scan failed: ' + error.message, 'error');
+    } finally {
+      setBatchBackScanning(false);
+    }
+  };
+
   const handleBatchSave = async () => {
     const selected = batchNotes.filter(n => n._selected);
     if (selected.length === 0) {
@@ -412,11 +462,19 @@ function App() {
       });
       const data = await response.json();
       if (data.success) {
-        showMessage(data.message, 'success');
+        showMessage('Notes saved! Syncing to Google Sheets...', 'success');
         setBatchNotes([]);
         setBatchPhoto(null);
+        setBatchBackPhoto(null);
         setView('collection');
-        fetchNotes();
+        await fetchNotes();
+        // Auto-sync to Google Sheets
+        try {
+          await fetch(`${API_BASE_URL}/api/notes/sync-sheets`, { method: 'POST' });
+          showMessage('Notes saved and synced to Google Sheets!', 'success');
+        } catch {
+          showMessage('Notes saved but sheet sync failed. Try manual sync.', 'info');
+        }
       } else {
         showMessage(data.error || 'Failed to save batch', 'error');
       }
@@ -973,12 +1031,6 @@ function App() {
             <h2>Your Collection</h2>
             <p className="collection-count">{notes.length} note{notes.length !== 1 ? 's' : ''} cataloged</p>
           </div>
-          <button className="btn-export btn-batch" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setView('batch'); }}>
-            Batch
-          </button>
-          <button className="btn-primary btn-add" onClick={() => { resetForm(); setView('add'); }}>
-            + Add
-          </button>
         </div>
         {notes.length > 0 && (
           <div className="header-secondary">
@@ -988,6 +1040,10 @@ function App() {
             <span className="header-divider">|</span>
             <button className="btn-text" onClick={handleExportCSV}>
               Export CSV
+            </button>
+            <span className="header-divider">|</span>
+            <button className="btn-text" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setView('batch'); }}>
+              Batch Scan
             </button>
           </div>
         )}
@@ -1096,33 +1152,62 @@ function App() {
           <p>No notes match your search.</p>
         </div>
       )}
+
+      {/* Floating Add Button */}
+      <button className="fab-add" onClick={() => { resetForm(); setView('add'); }}>
+        + Add Note
+      </button>
     </div>
   );
 
   // ─── Batch Scan View ───────────────────────────────
   const renderBatchView = () => (
     <div className="batch-view">
-      <button className="btn-secondary" onClick={() => { setView('collection'); setBatchNotes([]); setBatchPhoto(null); }} style={{ marginBottom: 16 }}>
+      <button className="btn-secondary" onClick={() => { setView('collection'); setBatchNotes([]); setBatchPhoto(null); setBatchBackPhoto(null); }} style={{ marginBottom: 16 }}>
         &larr; Back to Collection
       </button>
       <h2>Batch Scan</h2>
       <p className="form-subtitle">Take a photo of multiple bills laid out flat (no overlapping) and I'll detect each one.</p>
 
-      {!batchPhoto ? (
-        <label className="upload-label">
-          <input type="file" accept="image/*" onChange={handleBatchPhoto} hidden />
-          <div className="upload-placeholder" style={{ padding: '48px 20px' }}>
-            <span className="upload-icon">+</span>
-            <span>Photo of multiple bills</span>
-            <span className="upload-hint">Lay bills flat, no overlapping</span>
-          </div>
-        </label>
-      ) : (
-        <div className="batch-photo-wrap">
-          <img src={batchPhoto} alt="Batch scan" className="batch-photo-img" />
-          {scanning && <div className="scanning-overlay">Scanning...</div>}
+      <div className="batch-photos-row">
+        <div className="batch-photo-col">
+          <h4>Front Photo</h4>
+          {!batchPhoto ? (
+            <label className="upload-label">
+              <input type="file" accept="image/*" onChange={handleBatchPhoto} hidden />
+              <div className="upload-placeholder" style={{ padding: '32px 16px' }}>
+                <span className="upload-icon">+</span>
+                <span>Fronts of bills</span>
+                <span className="upload-hint">Lay bills flat, no overlapping</span>
+              </div>
+            </label>
+          ) : (
+            <div className="batch-photo-wrap">
+              <img src={batchPhoto} alt="Batch front scan" className="batch-photo-img" />
+              {scanning && <div className="scanning-overlay">Scanning fronts...</div>}
+            </div>
+          )}
         </div>
-      )}
+
+        <div className="batch-photo-col">
+          <h4>Back Photo <span className="optional-label">(optional)</span></h4>
+          {!batchBackPhoto ? (
+            <label className={`upload-label ${batchNotes.length === 0 ? 'upload-disabled' : ''}`}>
+              <input type="file" accept="image/*" onChange={handleBatchBackPhoto} hidden disabled={batchNotes.length === 0} />
+              <div className="upload-placeholder" style={{ padding: '32px 16px' }}>
+                <span className="upload-icon">+</span>
+                <span>Backs of bills</span>
+                <span className="upload-hint">{batchNotes.length === 0 ? 'Scan fronts first' : 'Same order as fronts'}</span>
+              </div>
+            </label>
+          ) : (
+            <div className="batch-photo-wrap">
+              <img src={batchBackPhoto} alt="Batch back scan" className="batch-photo-img" />
+              {batchBackScanning && <div className="scanning-overlay">Scanning backs...</div>}
+            </div>
+          )}
+        </div>
+      </div>
 
       {batchNotes.length > 0 && (
         <div className="batch-results">
@@ -1188,7 +1273,7 @@ function App() {
           ))}
 
           <div className="actions">
-            <button className="btn-secondary" onClick={() => { setBatchNotes([]); setBatchPhoto(null); }}>
+            <button className="btn-secondary" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setBatchBackPhoto(null); }}>
               Clear
             </button>
             <button className="btn-primary" onClick={handleBatchSave} disabled={loading}>

@@ -815,6 +815,59 @@ textarea { resize: vertical; min-height: 56px; }
 .batch-note-fields input { padding: 8px 10px; font-size: 0.88rem; }
 .btn-batch { padding: 10px 14px; font-size: 0.82rem; }
 
+/* ─── Floating Add Button ──────────────────────── */
+.fab-add {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  background: linear-gradient(135deg, #c5a44e, #a8893a);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 24px rgba(197, 164, 78, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s;
+}
+.fab-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(197, 164, 78, 0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+.fab-add:active {
+  transform: translateY(0);
+}
+
+/* ─── Batch Photos Row ─────────────────────────── */
+.batch-photos-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.batch-photo-col h4 {
+  color: #1a472a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.optional-label {
+  color: #8a9b87;
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+.upload-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .batch-photos-row { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 380px) {
   .stats-bar { grid-template-columns: repeat(3, 1fr); }
   .stat:nth-child(4), .stat:nth-child(5) { margin-top: 8px; }
