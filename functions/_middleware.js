@@ -11,6 +11,12 @@ export async function onRequest(context) {
     return context.next();
   }
 
+  // Allow public access to photo endpoints (needed for Google Sheets =IMAGE())
+  const url = new URL(context.request.url);
+  if (url.pathname.startsWith('/api/photos/')) {
+    return context.next();
+  }
+
   const auth = context.request.headers.get('Authorization');
 
   if (auth) {
