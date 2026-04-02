@@ -5,7 +5,13 @@ import { analyzeNote, generateId } from '../_currency.js';
  */
 export async function onRequestGet(context) {
   const db = context.env.DB;
-  const { results } = await db.prepare('SELECT * FROM notes ORDER BY date_added DESC').all();
+  const { results } = await db.prepare(`SELECT id, denomination, series_year, serial_number,
+    treasurer_signature, secretary_signature, friedberg_number, is_star_note,
+    fancy_serials, errors, grade, grader, cert_number, grading_comments,
+    estimated_value, cost_paid, photo_front_key, photo_back_key,
+    CASE WHEN photo_front_base64 != '' THEN 1 ELSE 0 END as has_photo_front,
+    CASE WHEN photo_back_base64 != '' THEN 1 ELSE 0 END as has_photo_back,
+    flags, user_notes, date_added FROM notes ORDER BY date_added DESC`).all();
 
   const notes = results.map(row => ({
     id: row.id,
@@ -26,6 +32,8 @@ export async function onRequestGet(context) {
     costPaid: row.cost_paid,
     photoFrontKey: row.photo_front_key,
     photoBackKey: row.photo_back_key,
+    hasPhotoFront: !!row.has_photo_front,
+    hasPhotoBack: !!row.has_photo_back,
     flags: JSON.parse(row.flags || '[]'),
     notes: row.user_notes,
     dateAdded: row.date_added,
@@ -75,21 +83,29 @@ export async function onRequestPost(context) {
 
     let photoFrontKey = '';
     let photoBackKey = '';
+    let photoFrontBase64 = '';
+    let photoBackBase64 = '';
 
-    if (photoFrontFile && context.env.PHOTOS) {
-      const ext = photoFrontFile.name.split('.').pop() || 'jpg';
-      photoFrontKey = `notes/${id}-front.${ext}`;
-      await context.env.PHOTOS.put(photoFrontKey, photoFrontFile.stream(), {
-        httpMetadata: { contentType: photoFrontFile.type },
-      });
+    if (photoFrontFile) {
+      photoFrontKey = `notes/${id}-front.jpg`;
+      const buffer = await photoFrontFile.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      photoFrontBase64 = btoa(binary);
     }
 
-    if (photoBackFile && context.env.PHOTOS) {
-      const ext = photoBackFile.name.split('.').pop() || 'jpg';
-      photoBackKey = `notes/${id}-back.${ext}`;
-      await context.env.PHOTOS.put(photoBackKey, photoBackFile.stream(), {
-        httpMetadata: { contentType: photoBackFile.type },
-      });
+    if (photoBackFile) {
+      photoBackKey = `notes/${id}-back.jpg`;
+      const buffer = await photoBackFile.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      photoBackBase64 = btoa(binary);
     }
 
     const friedberg = analysis.friedbergNumber || noteData.friedbergNumber || '';
@@ -100,8 +116,9 @@ export async function onRequestPost(context) {
         treasurer_signature, secretary_signature, friedberg_number,
         is_star_note, fancy_serials, errors, grade, grader, cert_number,
         grading_comments, estimated_value, cost_paid, photo_front_key,
-        photo_back_key, flags, user_notes, date_added)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        photo_back_key, photo_front_base64, photo_back_base64,
+        flags, user_notes, date_added)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       noteData.denomination || '',
@@ -121,6 +138,8 @@ export async function onRequestPost(context) {
       noteData.costPaid || '',
       photoFrontKey,
       photoBackKey,
+      photoFrontBase64,
+      photoBackBase64,
       JSON.stringify(analysis.flags),
       noteData.notes || '',
       now,

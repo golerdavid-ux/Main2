@@ -67,7 +67,13 @@ export async function onRequestPost(context) {
     }
 
     // Get all notes from D1
-    const { results } = await context.env.DB.prepare('SELECT * FROM notes ORDER BY date_added DESC').all();
+    const { results } = await context.env.DB.prepare(`SELECT id, denomination, series_year, serial_number,
+      treasurer_signature, secretary_signature, friedberg_number, is_star_note,
+      fancy_serials, errors, grade, grader, cert_number, grading_comments,
+      estimated_value, cost_paid, photo_front_key, photo_back_key,
+      CASE WHEN photo_front_base64 != '' THEN 1 ELSE 0 END as photo_front_base64,
+      CASE WHEN photo_back_base64 != '' THEN 1 ELSE 0 END as photo_back_base64,
+      flags, user_notes, date_added FROM notes ORDER BY date_added DESC`).all();
 
     const parseJSON = (str) => {
       try { return JSON.parse(str || '[]'); } catch { return []; }
@@ -87,8 +93,8 @@ export async function onRequestPost(context) {
     ];
 
     const rows = results.map(r => [
-      r.photo_front_key ? `=IMAGE("${siteUrl}/api/photos/${r.photo_front_key.replace('notes/', '')}", 1)` : '',
-      r.photo_back_key ? `=IMAGE("${siteUrl}/api/photos/${r.photo_back_key.replace('notes/', '')}", 1)` : '',
+      r.photo_front_base64 ? `=IMAGE("${siteUrl}/api/photos/note/${r.id}/front", 1)` : '',
+      r.photo_back_base64 ? `=IMAGE("${siteUrl}/api/photos/note/${r.id}/back", 1)` : '',
       `$${r.denomination}`,
       r.series_year,
       r.serial_number,
@@ -139,6 +145,43 @@ export async function onRequestPost(context) {
     const writeResult = await writeResponse.json();
 
     if (writeResponse.ok) {
+      // Set row heights so images are visible (skip header row)
+      if (results.length > 0) {
+        const rowRequests = results.map((_, i) => ({
+          updateDimensionProperties: {
+            range: {
+              sheetId: 0,
+              dimension: 'ROWS',
+              startIndex: i + 1,
+              endIndex: i + 2,
+            },
+            properties: { pixelSize: 120 },
+            fields: 'pixelSize',
+          },
+        }));
+
+        // Also set column widths for photo columns
+        rowRequests.push({
+          updateDimensionProperties: {
+            range: { sheetId: 0, dimension: 'COLUMNS', startIndex: 0, endIndex: 2 },
+            properties: { pixelSize: 200 },
+            fields: 'pixelSize',
+          },
+        });
+
+        await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ requests: rowRequests }),
+          }
+        );
+      }
+
       return Response.json({
         success: true,
         message: `Synced ${results.length} notes to your Google Sheet!`,

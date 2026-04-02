@@ -139,6 +139,10 @@ function App() {
           serialNumber: ext.serialNumber || prev.serialNumber,
           treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
           secretarySignature: ext.secretarySignature || prev.secretarySignature,
+          grader: ext.grader || prev.grader,
+          grade: ext.grade || prev.grade,
+          certNumber: ext.certNumber || prev.certNumber,
+          gradingComments: ext.gradingComments || prev.gradingComments,
           errors: (ext.errors && ext.errors.length > 0) ? ext.errors : prev.errors,
         }));
         showMessage(data.message, 'success');
@@ -229,8 +233,15 @@ function App() {
           body.append(key, value);
         }
       });
-      if (photoFront) body.append('photoFront', photoFront);
-      if (photoBack) body.append('photoBack', photoBack);
+      // Resize photos before storing (800px for compact D1 storage)
+      if (photoFront) {
+        const resizedFront = await resizeImage(photoFront, 800);
+        body.append('photoFront', resizedFront);
+      }
+      if (photoBack) {
+        const resizedBack = await resizeImage(photoBack, 800);
+        body.append('photoBack', resizedBack);
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/notes`, {
         method: 'POST',
@@ -325,22 +336,22 @@ function App() {
         </div>
 
         <div className="detail-grid">
-          {(n.photoFrontKey || n.photoBackKey) && (
+          {(n.hasPhotoFront || n.hasPhotoBack) && (
             <div className="detail-photos">
-              {n.photoFrontKey && (
+              {n.hasPhotoFront && (
                 <div className="detail-photo">
                   <span className="photo-label">Front</span>
                   <img
-                    src={`${API_BASE_URL}/api/photos/${n.photoFrontKey.replace('notes/', '')}`}
+                    src={`${API_BASE_URL}/api/photos/note/${n.id}/front`}
                     alt={`$${n.denomination} Front`}
                   />
                 </div>
               )}
-              {n.photoBackKey && (
+              {n.hasPhotoBack && (
                 <div className="detail-photo">
                   <span className="photo-label">Back</span>
                   <img
-                    src={`${API_BASE_URL}/api/photos/${n.photoBackKey.replace('notes/', '')}`}
+                    src={`${API_BASE_URL}/api/photos/note/${n.id}/back`}
                     alt={`$${n.denomination} Back`}
                   />
                 </div>
@@ -697,10 +708,10 @@ function App() {
               className="note-card"
               onClick={() => { setSelectedNote(note); setView('detail'); }}
             >
-              {note.photoFrontKey ? (
+              {note.hasPhotoFront ? (
                 <div className="card-photo">
                   <img
-                    src={`${API_BASE_URL}/api/photos/${note.photoFrontKey.replace('notes/', '')}`}
+                    src={`${API_BASE_URL}/api/photos/note/${note.id}/front`}
                     alt={`$${note.denomination}`}
                   />
                 </div>

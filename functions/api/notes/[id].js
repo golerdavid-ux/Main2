@@ -78,21 +78,29 @@ export async function onRequestPut(context) {
 
     let photoFrontKey = existing.photo_front_key;
     let photoBackKey = existing.photo_back_key;
+    let photoFrontBase64 = existing.photo_front_base64 || '';
+    let photoBackBase64 = existing.photo_back_base64 || '';
 
-    if (photoFrontFile && context.env.PHOTOS) {
-      const ext = photoFrontFile.name.split('.').pop() || 'jpg';
-      photoFrontKey = `notes/${id}-front.${ext}`;
-      await context.env.PHOTOS.put(photoFrontKey, photoFrontFile.stream(), {
-        httpMetadata: { contentType: photoFrontFile.type },
-      });
+    if (photoFrontFile) {
+      photoFrontKey = `notes/${id}-front.jpg`;
+      const buffer = await photoFrontFile.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      photoFrontBase64 = btoa(binary);
     }
 
-    if (photoBackFile && context.env.PHOTOS) {
-      const ext = photoBackFile.name.split('.').pop() || 'jpg';
-      photoBackKey = `notes/${id}-back.${ext}`;
-      await context.env.PHOTOS.put(photoBackKey, photoBackFile.stream(), {
-        httpMetadata: { contentType: photoBackFile.type },
-      });
+    if (photoBackFile) {
+      photoBackKey = `notes/${id}-back.jpg`;
+      const buffer = await photoBackFile.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      photoBackBase64 = btoa(binary);
     }
 
     const friedberg = analysis.friedbergNumber || updates.friedbergNumber || existing.friedberg_number;
@@ -102,7 +110,8 @@ export async function onRequestPut(context) {
         treasurer_signature=?, secretary_signature=?, friedberg_number=?,
         is_star_note=?, fancy_serials=?, errors=?, grade=?, grader=?,
         cert_number=?, grading_comments=?, estimated_value=?, cost_paid=?,
-        photo_front_key=?, photo_back_key=?, flags=?, user_notes=?
+        photo_front_key=?, photo_back_key=?, photo_front_base64=?,
+        photo_back_base64=?, flags=?, user_notes=?
       WHERE id=?
     `).bind(
       denomination,
@@ -122,6 +131,8 @@ export async function onRequestPut(context) {
       updates.costPaid || existing.cost_paid,
       photoFrontKey,
       photoBackKey,
+      photoFrontBase64,
+      photoBackBase64,
       JSON.stringify(analysis.flags),
       updates.notes || existing.user_notes,
       id,
@@ -140,16 +151,6 @@ export async function onRequestDelete(context) {
   const id = context.params.id;
   const existing = await context.env.DB.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first();
   if (!existing) return Response.json({ error: 'Note not found' }, { status: 404 });
-
-  // Delete photos from R2 if they exist
-  if (context.env.PHOTOS) {
-    if (existing.photo_front_key) {
-      try { await context.env.PHOTOS.delete(existing.photo_front_key); } catch {}
-    }
-    if (existing.photo_back_key) {
-      try { await context.env.PHOTOS.delete(existing.photo_back_key); } catch {}
-    }
-  }
 
   await context.env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(id).run();
   return Response.json({ success: true, message: 'Note deleted' });

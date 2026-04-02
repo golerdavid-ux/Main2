@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
 
-    const frontPrompt = `You are an expert U.S. currency cataloger analyzing a photo of the FRONT (obverse) of a U.S. banknote. Extract every detail you can see with precision.
+    const frontPrompt = `You are an expert U.S. currency cataloger analyzing a photo of the FRONT (obverse) of a U.S. banknote. The note may be loose or inside a grading slab/holder (PMG, PCGS, CGC). Extract every detail you can see with precision.
 
 Return ONLY a valid JSON object with these fields (use empty string "" if you cannot determine a field):
 {
@@ -43,11 +43,17 @@ Return ONLY a valid JSON object with these fields (use empty string "" if you ca
   "serialNumber": "the EXACT full serial number including all letters, digits, and star symbol if present. Read every character carefully.",
   "treasurerSignature": "full name of the Treasurer of the United States printed on the note",
   "secretarySignature": "full name of the Secretary of the Treasury printed on the note",
+  "grader": "the grading company if in a slab: PMG, PCGS, or CGC. Empty string if raw/ungraded.",
+  "grade": "the numeric grade and any qualifiers from the slab label, e.g. 66 EPQ, 58 PPQ, 65 Star. Empty string if raw.",
+  "certNumber": "the certification/serial number on the grading label. Empty string if raw.",
+  "gradingComments": "any additional text on the grading label like note description. Empty string if none.",
   "errors": [],
   "condition": "brief description of the note's physical condition"
 }
 
 IMPORTANT: Read the serial number character by character. Include the prefix letter(s), all 8 digits, and the suffix letter. If there is a star (*) symbol, include it.
+
+If the note is in a grading holder/slab, read the label carefully to extract grader, grade, and certification number. Look for text like "PMG", "PCGS Banknote", or "CGC" on the label.
 
 Return ONLY the JSON object, no other text.`;
 

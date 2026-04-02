@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS notes (
   cost_paid TEXT DEFAULT '',
   photo_front_key TEXT DEFAULT '',
   photo_back_key TEXT DEFAULT '',
+  photo_front_base64 TEXT DEFAULT '',
+  photo_back_base64 TEXT DEFAULT '',
   flags TEXT DEFAULT '[]',
   user_notes TEXT DEFAULT '',
   date_added TEXT NOT NULL
