@@ -95,10 +95,12 @@ Return ONLY the JSON object, no other text.`;
 
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    // Parse JSON from response
+    // Parse JSON from response — handle markdown code blocks
     let extracted = {};
     try {
-      const jsonMatch = text.match(/\{[\s\S]*?\}/);
+      // Strip markdown code fences if present
+      let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         extracted = JSON.parse(jsonMatch[0]);
       }
@@ -118,11 +120,16 @@ Return ONLY the JSON object, no other text.`;
       extracted.errors = [];
     }
 
+    const fields = [];
+    if (extracted.denomination) fields.push(`$${extracted.denomination}`);
+    if (extracted.seriesYear) fields.push(`Series ${extracted.seriesYear}`);
+    if (extracted.serialNumber) fields.push(`S/N: ${extracted.serialNumber}`);
+
     return Response.json({
       success: true,
       extracted,
-      message: extracted.denomination
-        ? `I found a $${extracted.denomination} note! Review the details and make any corrections.`
+      message: fields.length > 0
+        ? `Found: ${fields.join(' | ')}. Review and correct if needed.`
         : 'I analyzed the photo. Please review and fill in any missing details.',
     });
 

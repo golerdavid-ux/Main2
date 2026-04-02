@@ -45,7 +45,7 @@ function App() {
 
   const showMessage = (text, type) => {
     setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 5000);
+    setTimeout(() => setMessage({ text: '', type: '' }), 8000);
   };
 
   const fetchNotes = useCallback(async () => {
