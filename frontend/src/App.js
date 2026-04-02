@@ -93,7 +93,7 @@ function App() {
     }));
   };
 
-  const resizeImage = (file, maxDim = 1536) => {
+  const resizeImage = (file, maxDim = 2048) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -141,6 +141,7 @@ function App() {
           seriesYear: ext.seriesYear || prev.seriesYear,
           noteType: ext.noteType || prev.noteType,
           serialNumber: ext.serialNumber || prev.serialNumber,
+          notes: ext.bankName ? `Bank: ${ext.bankName}` : prev.notes,
           treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
           secretarySignature: ext.secretarySignature || prev.secretarySignature,
           grader: ext.grader || prev.grader,

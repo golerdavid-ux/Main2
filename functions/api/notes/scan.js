@@ -34,28 +34,49 @@ export async function onRequestPost(context) {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
 
-    const frontPrompt = `You are an expert U.S. currency cataloger analyzing a photo of the FRONT (obverse) of a U.S. banknote. The note may be loose or inside a grading slab/holder (PMG, PCGS, CGC). Extract every detail you can see with precision.
+    const frontPrompt = `You are a world-class U.S. currency expert and numismatist analyzing a photo of the FRONT (obverse) of a U.S. banknote. You have deep knowledge of ALL types of U.S. paper currency from the 1860s to present day.
+
+This note could be ANY type of U.S. currency including:
+- Modern small-size notes (1929-present): Federal Reserve Notes, Silver Certificates, United States Notes
+- Large-size notes (1861-1928): Legal Tender Notes, Silver Certificates, Gold Certificates, Treasury Notes, National Bank Notes, Federal Reserve Bank Notes, Compound Interest Treasury Notes, Demand Notes
+- Fractional Currency (1862-1876)
+- Military Payment Certificates
+- National Gold Bank Notes
+- Interest Bearing Notes
+
+IMPORTANT: Older and rare notes have VERY different layouts than modern bills. Look carefully:
+- The denomination may be spelled out in words or shown in Roman numerals
+- The serial number format varies by era (may be shorter, different letter patterns, or in unusual locations)
+- The note type is usually printed prominently (e.g. "SILVER CERTIFICATE", "GOLD CERTIFICATE", "NATIONAL CURRENCY", "UNITED STATES NOTE")
+- Signatures on older notes may be hand-signed or different officials (Register of the Treasury, etc.)
+- Look for bank names on National Bank Notes (e.g. "First National Bank of...")
+- Look for charter numbers on National Bank Notes
+
+Read ALL text on the note carefully, including ornate/decorative text. Do not skip text because it's in an unusual font or layout.
 
 Return ONLY a valid JSON object with these fields (use empty string "" if you cannot determine a field):
 {
-  "denomination": "the face value as just a number, e.g. 1, 5, 10, 20, 50, 100",
-  "seriesYear": "the exact series year printed on the note, e.g. 2013 or 2017A",
-  "noteType": "the type of note printed on the bill, e.g. Federal Reserve Note, Silver Certificate, Gold Certificate, United States Note, National Bank Note, Treasury Note, Federal Reserve Bank Note",
-  "serialNumber": "the EXACT full serial number including all letters, digits, and star symbol if present. Read every character carefully.",
-  "treasurerSignature": "full name of the Treasurer of the United States printed on the note",
-  "secretarySignature": "full name of the Secretary of the Treasury printed on the note",
+  "denomination": "the face value as just a number, e.g. 1, 2, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000",
+  "seriesYear": "the series year if printed. Older notes may say 'Series of 1899' or just '1899'. Extract just the year/letter, e.g. 1899, 1928A, 2017A",
+  "noteType": "the type of note printed on the bill. Read it exactly. Examples: Federal Reserve Note, Silver Certificate, Gold Certificate, United States Note, Legal Tender, National Currency, National Bank Note, Treasury Note, Federal Reserve Bank Note, Demand Note, Fractional Currency, Military Payment Certificate",
+  "serialNumber": "the EXACT full serial number including all letters, digits, and star symbol if present. Read every character carefully. Older notes may have shorter serials or different formats.",
+  "treasurerSignature": "the name of the Treasurer (or Register of the Treasury on older notes) if readable",
+  "secretarySignature": "the name of the Secretary of the Treasury if readable",
   "grader": "the grading company if in a slab: PMG, PCGS, or CGC. Empty string if raw/ungraded.",
   "grade": "the numeric grade and any qualifiers from the slab label, e.g. 66 EPQ, 58 PPQ, 65 Star. Empty string if raw.",
   "certNumber": "the certification/serial number on the grading label. Empty string if raw.",
   "gradingComments": "any additional text on the grading label like note description. Empty string if none.",
+  "bankName": "for National Bank Notes only: the full name of the issuing bank. Empty string if not applicable.",
   "errors": [],
-  "condition": "brief description of the note's physical condition",
-  "estimatedValue": "your best estimate of the note's current market value as a number (no $ sign). Consider denomination, series year, note type, condition, star note status, fancy serial patterns, errors, and grading. For common circulated modern FRNs, value is close to face value. For uncirculated, star notes, older series, silver/gold certificates, errors, or fancy serials, value can be significantly higher. Return just the number, e.g. 1.50 or 250 or 5000."
+  "condition": "brief description of the note's physical condition (e.g. Crisp Uncirculated, About Uncirculated, Very Fine, Fine, Very Good, Good, Poor)",
+  "estimatedValue": "your best estimate of the note's current market value as a number (no $ sign). Consider denomination, series year, note type, condition, rarity, star note status, fancy serial patterns, errors, and grading. Rare types like Gold Certificates, large-size notes, and National Bank Notes can be worth hundreds to thousands even in lower grades. Return just the number, e.g. 1.50 or 250 or 5000."
 }
 
-IMPORTANT: Read the serial number character by character. Include the prefix letter(s), all 8 digits, and the suffix letter. If there is a star (*) symbol, include it.
+IMPORTANT: Read the serial number character by character. Include all prefix letters, digits, and suffix letters. If there is a star (*) symbol, include it.
 
-If the note is in a grading holder/slab, read the label carefully to extract grader, grade, and certification number. Look for text like "PMG", "PCGS Banknote", or "CGC" on the label.
+If the note is in a grading holder/slab, read the label carefully to extract grader, grade, and certification number.
+
+If text is hard to read due to age, wear, or ornate fonts, make your best effort rather than returning empty strings. Use your numismatic knowledge to fill in what you can identify from the visual design, color of the seal, portrait, and other identifying features even if text is partially obscured.
 
 Return ONLY the JSON object, no other text.`;
 
@@ -93,7 +114,7 @@ Return ONLY the JSON object, no other text.`;
           }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
             responseMimeType: 'application/json',
           },
         }),
