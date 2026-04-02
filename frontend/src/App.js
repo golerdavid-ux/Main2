@@ -534,9 +534,6 @@ function App() {
               />
             </div>
           </div>
-          <button type="button" className="btn-analyze" onClick={handleAnalyze}>
-            Analyze Note
-          </button>
         </div>
 
         {/* Errors */}
