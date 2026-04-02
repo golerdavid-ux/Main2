@@ -389,9 +389,15 @@ function App() {
     if (!window.confirm('Remove this note from your Money Book?')) return;
     try {
       await fetch(`${API_BASE_URL}/api/notes/${id}`, { method: 'DELETE' });
-      showMessage('Note removed from collection', 'success');
+      showMessage('Note removed! Syncing to Google Sheets...', 'success');
       setView('collection');
-      fetchNotes();
+      await fetchNotes();
+      try {
+        await fetch(`${API_BASE_URL}/api/notes/sync-sheets`, { method: 'POST' });
+        showMessage('Note removed and Google Sheet updated!', 'success');
+      } catch {
+        showMessage('Note removed but sheet sync failed. Try manual sync.', 'info');
+      }
     } catch (error) {
       showMessage('Failed to delete note', 'error');
     }
