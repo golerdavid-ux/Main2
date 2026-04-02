@@ -681,6 +681,73 @@ textarea { resize: vertical; min-height: 56px; }
   .error-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* ─── Batch Scan ────────────────────────────────── */
+.batch-view h2 { color: #1a472a; margin: 0 0 6px; font-weight: 700; font-size: 1.3rem; }
+.batch-photo-wrap {
+  position: relative;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.batch-photo-img {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  border: 1.5px solid #e0dbd0;
+}
+.batch-results h3 {
+  color: #1a472a;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 20px 0 12px;
+}
+.batch-note-card {
+  background: #fff;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+.batch-note-card:not(.batch-note-excluded) {
+  border-color: #1a472a;
+}
+.batch-note-excluded {
+  opacity: 0.5;
+}
+.batch-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.batch-note-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #1a472a;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.batch-note-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #1a472a;
+}
+.batch-note-summary {
+  color: #8a9b87;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.batch-note-fields {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0ece0;
+}
+.batch-note-fields .form-row { margin-bottom: 8px; }
+.batch-note-fields input { padding: 8px 10px; font-size: 0.88rem; }
+.btn-batch { padding: 10px 14px; font-size: 0.82rem; }
+
 @media (max-width: 380px) {
   .stats-bar { grid-template-columns: repeat(3, 1fr); }
   .stat:nth-child(4), .stat:nth-child(5) { margin-top: 8px; }

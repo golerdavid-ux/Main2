@@ -15,10 +15,12 @@ const GRADERS = ['PMG', 'PCGS', 'CGC', 'Ungraded'];
 
 function App() {
   const [notes, setNotes] = useState([]);
-  const [view, setView] = useState('collection'); // 'collection' | 'add' | 'detail'
+  const [view, setView] = useState('collection'); // 'collection' | 'add' | 'detail' | 'batch'
   const [selectedNote, setSelectedNote] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [batchNotes, setBatchNotes] = useState([]);
+  const [batchPhoto, setBatchPhoto] = useState(null);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [photoFront, setPhotoFront] = useState(null);
@@ -278,6 +280,77 @@ function App() {
 
   const handleExportCSV = () => {
     window.open(`${API_BASE_URL}/api/notes/export/csv`, '_blank');
+  };
+
+  const handleBatchPhoto = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBatchPhoto(URL.createObjectURL(file));
+    setScanning(true);
+    setBatchNotes([]);
+    showMessage('Scanning for multiple bills...', 'info');
+    try {
+      const resized = await resizeImage(file, 2048);
+      const body = new FormData();
+      body.append('photo', resized);
+      const response = await fetch(`${API_BASE_URL}/api/notes/batch-scan`, {
+        method: 'POST',
+        body,
+      });
+      const data = await response.json();
+      if (data.success && data.notes) {
+        setBatchNotes(data.notes.map((n, i) => ({ ...n, _selected: true, _index: i })));
+        showMessage(data.message, 'success');
+      } else {
+        showMessage(data.error || 'Could not detect bills. Try a clearer photo.', 'error');
+      }
+    } catch (error) {
+      showMessage('Batch scan failed: ' + error.message, 'error');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleBatchNoteChange = (index, field, value) => {
+    setBatchNotes(prev => prev.map((n, i) =>
+      i === index ? { ...n, [field]: value } : n
+    ));
+  };
+
+  const handleBatchToggle = (index) => {
+    setBatchNotes(prev => prev.map((n, i) =>
+      i === index ? { ...n, _selected: !n._selected } : n
+    ));
+  };
+
+  const handleBatchSave = async () => {
+    const selected = batchNotes.filter(n => n._selected);
+    if (selected.length === 0) {
+      showMessage('No notes selected to save', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notes/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: selected }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        showMessage(data.message, 'success');
+        setBatchNotes([]);
+        setBatchPhoto(null);
+        setView('collection');
+        fetchNotes();
+      } else {
+        showMessage(data.error || 'Failed to save batch', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to save: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const [syncing, setSyncing] = useState(false);
@@ -644,8 +717,11 @@ function App() {
             <h2>Your Collection</h2>
             <p className="collection-count">{notes.length} note{notes.length !== 1 ? 's' : ''} cataloged</p>
           </div>
+          <button className="btn-export btn-batch" onClick={() => { setBatchNotes([]); setBatchPhoto(null); setView('batch'); }}>
+            Batch
+          </button>
           <button className="btn-primary btn-add" onClick={() => { resetForm(); setView('add'); }}>
-            + Add Note
+            + Add
           </button>
         </div>
         {notes.length > 0 && (
@@ -764,6 +840,103 @@ function App() {
     </div>
   );
 
+  // ─── Batch Scan View ───────────────────────────────
+  const renderBatchView = () => (
+    <div className="batch-view">
+      <button className="btn-secondary" onClick={() => { setView('collection'); setBatchNotes([]); setBatchPhoto(null); }} style={{ marginBottom: 16 }}>
+        &larr; Back to Collection
+      </button>
+      <h2>Batch Scan</h2>
+      <p className="form-subtitle">Take a photo of multiple bills laid out flat (no overlapping) and I'll detect each one.</p>
+
+      {!batchPhoto ? (
+        <label className="upload-label">
+          <input type="file" accept="image/*" onChange={handleBatchPhoto} hidden />
+          <div className="upload-placeholder" style={{ padding: '48px 20px' }}>
+            <span className="upload-icon">+</span>
+            <span>Photo of multiple bills</span>
+            <span className="upload-hint">Lay bills flat, no overlapping</span>
+          </div>
+        </label>
+      ) : (
+        <div className="batch-photo-wrap">
+          <img src={batchPhoto} alt="Batch scan" className="batch-photo-img" />
+          {scanning && <div className="scanning-overlay">Scanning...</div>}
+        </div>
+      )}
+
+      {batchNotes.length > 0 && (
+        <div className="batch-results">
+          <h3>{batchNotes.length} note{batchNotes.length !== 1 ? 's' : ''} detected</h3>
+          {batchNotes.map((note, i) => (
+            <div key={i} className={`batch-note-card ${note._selected ? '' : 'batch-note-excluded'}`}>
+              <div className="batch-note-header">
+                <label className="batch-note-check">
+                  <input type="checkbox" checked={note._selected} onChange={() => handleBatchToggle(i)} />
+                  <span>Note {i + 1}</span>
+                </label>
+                <span className="batch-note-summary">
+                  ${note.denomination || '?'} &middot; {note.seriesYear || '?'}
+                </span>
+              </div>
+              {note._selected && (
+                <div className="batch-note-fields">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Denomination</label>
+                      <input value={note.denomination || ''} onChange={e => handleBatchNoteChange(i, 'denomination', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Series Year</label>
+                      <input value={note.seriesYear || ''} onChange={e => handleBatchNoteChange(i, 'seriesYear', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Serial Number</label>
+                      <input value={note.serialNumber || ''} onChange={e => handleBatchNoteChange(i, 'serialNumber', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Treasurer</label>
+                      <input value={note.treasurerSignature || ''} onChange={e => handleBatchNoteChange(i, 'treasurerSignature', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Secretary</label>
+                      <input value={note.secretarySignature || ''} onChange={e => handleBatchNoteChange(i, 'secretarySignature', e.target.value)} />
+                    </div>
+                  </div>
+                  {(note.grader || note.grade) && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Grader</label>
+                        <input value={note.grader || ''} onChange={e => handleBatchNoteChange(i, 'grader', e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label>Grade</label>
+                        <input value={note.grade || ''} onChange={e => handleBatchNoteChange(i, 'grade', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="actions">
+            <button className="btn-secondary" onClick={() => { setBatchNotes([]); setBatchPhoto(null); }}>
+              Clear
+            </button>
+            <button className="btn-primary" onClick={handleBatchSave} disabled={loading}>
+              {loading ? 'Saving...' : `Add ${batchNotes.filter(n => n._selected).length} Notes`}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="App">
       <div className="container">
@@ -779,6 +952,7 @@ function App() {
         {view === 'collection' && renderCollection()}
         {view === 'add' && renderAddForm()}
         {view === 'detail' && renderDetail()}
+        {view === 'batch' && renderBatchView()}
       </div>
     </div>
   );
