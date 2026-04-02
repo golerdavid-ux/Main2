@@ -639,25 +639,26 @@ function App() {
   const renderCollection = () => (
     <div className="collection-view">
       <div className="collection-header">
-        <div>
-          <h2>Your Collection</h2>
-          <p className="collection-count">{notes.length} note{notes.length !== 1 ? 's' : ''} cataloged</p>
-        </div>
-        <div className="header-actions">
-          {notes.length > 0 && (
-            <>
-              <button className="btn-export" onClick={handleSyncSheets} disabled={syncing}>
-                {syncing ? 'Syncing...' : 'Sync to Google Sheets'}
-              </button>
-              <button className="btn-export" onClick={handleExportCSV}>
-                Export CSV
-              </button>
-            </>
-          )}
-          <button className="btn-primary" onClick={() => { resetForm(); setView('add'); }}>
+        <div className="header-top">
+          <div>
+            <h2>Your Collection</h2>
+            <p className="collection-count">{notes.length} note{notes.length !== 1 ? 's' : ''} cataloged</p>
+          </div>
+          <button className="btn-primary btn-add" onClick={() => { resetForm(); setView('add'); }}>
             + Add Note
           </button>
         </div>
+        {notes.length > 0 && (
+          <div className="header-secondary">
+            <button className="btn-text" onClick={handleSyncSheets} disabled={syncing}>
+              {syncing ? 'Syncing...' : 'Sync to Sheets'}
+            </button>
+            <span className="header-divider">|</span>
+            <button className="btn-text" onClick={handleExportCSV}>
+              Export CSV
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats Bar */}
@@ -665,19 +666,19 @@ function App() {
         <div className="stats-bar">
           <div className="stat">
             <span className="stat-value">{collectionStats.total}</span>
-            <span className="stat-label">Total Notes</span>
+            <span className="stat-label">Notes</span>
           </div>
           <div className="stat">
             <span className="stat-value">${collectionStats.totalValue.toLocaleString()}</span>
-            <span className="stat-label">Est. Value</span>
+            <span className="stat-label">Value</span>
           </div>
           <div className="stat">
             <span className="stat-value">${collectionStats.totalCost.toLocaleString()}</span>
-            <span className="stat-label">Total Cost</span>
+            <span className="stat-label">Cost</span>
           </div>
           <div className="stat">
             <span className="stat-value">{collectionStats.starNotes}</span>
-            <span className="stat-label">Star Notes</span>
+            <span className="stat-label">Stars</span>
           </div>
           <div className="stat">
             <span className="stat-value">{collectionStats.graded}</span>
@@ -690,7 +691,7 @@ function App() {
       {notes.length > 0 && (
         <div className="search-bar">
           <input
-            type="text" placeholder="Search by denomination, series, serial, Friedberg #, or flags..."
+            type="text" placeholder="Search notes..."
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
