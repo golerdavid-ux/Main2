@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -27,6 +28,10 @@ function App() {
   const [photoBack, setPhotoBack] = useState(null);
   const [photoFrontPreview, setPhotoFrontPreview] = useState(null);
   const [photoBackPreview, setPhotoBackPreview] = useState(null);
+  const [cropState, setCropState] = useState(null); // { imageUrl, side }
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   const [formData, setFormData] = useState({
     denomination: '',
@@ -135,22 +140,33 @@ function App() {
 
       if (data.success && data.extracted) {
         const ext = data.extracted;
-        setFormData(prev => ({
-          ...prev,
-          denomination: ext.denomination || prev.denomination,
-          seriesYear: ext.seriesYear || prev.seriesYear,
-          noteType: ext.noteType || prev.noteType,
-          serialNumber: ext.serialNumber || prev.serialNumber,
-          notes: ext.bankName ? `Bank: ${ext.bankName}` : prev.notes,
-          treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
-          secretarySignature: ext.secretarySignature || prev.secretarySignature,
-          grader: ext.grader || prev.grader,
-          grade: ext.grade || prev.grade,
-          certNumber: ext.certNumber || prev.certNumber,
-          gradingComments: ext.gradingComments || prev.gradingComments,
-          estimatedValue: ext.estimatedValue || prev.estimatedValue,
-          errors: (ext.errors && ext.errors.length > 0) ? ext.errors : prev.errors,
-        }));
+        if (side === 'back') {
+          // Back scan: only update errors and condition, don't overwrite front data
+          setFormData(prev => ({
+            ...prev,
+            errors: (ext.errors && ext.errors.length > 0)
+              ? [...new Set([...prev.errors, ...ext.errors])]
+              : prev.errors,
+          }));
+        } else {
+          // Front scan: fill all fields
+          setFormData(prev => ({
+            ...prev,
+            denomination: ext.denomination || prev.denomination,
+            seriesYear: ext.seriesYear || prev.seriesYear,
+            noteType: ext.noteType || prev.noteType,
+            serialNumber: ext.serialNumber || prev.serialNumber,
+            notes: ext.bankName ? `Bank: ${ext.bankName}` : prev.notes,
+            treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
+            secretarySignature: ext.secretarySignature || prev.secretarySignature,
+            grader: ext.grader || prev.grader,
+            grade: ext.grade || prev.grade,
+            certNumber: ext.certNumber || prev.certNumber,
+            gradingComments: ext.gradingComments || prev.gradingComments,
+            estimatedValue: ext.estimatedValue || prev.estimatedValue,
+            errors: (ext.errors && ext.errors.length > 0) ? ext.errors : prev.errors,
+          }));
+        }
         showMessage(data.message, 'success');
 
         // Auto-run analysis for Friedberg # and fancy serials
@@ -172,20 +188,74 @@ function App() {
     }
   };
 
+  const getCroppedImg = (imageSrc, pixelCrop) => {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = pixelCrop.width;
+        canvas.height = pixelCrop.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(
+          image,
+          pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+          0, 0, pixelCrop.width, pixelCrop.height
+        );
+        canvas.toBlob((blob) => {
+          resolve({
+            file: new File([blob], 'cropped.jpg', { type: 'image/jpeg' }),
+            dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+          });
+        }, 'image/jpeg', 0.9);
+      };
+      image.src = imageSrc;
+    });
+  };
+
   const handlePhotoChange = (side) => (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
+      reader.onloadend = () => {
+        setCropState({ imageUrl: reader.result, side });
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async () => {
+    if (!cropState || !croppedAreaPixels) return;
+    const { side } = cropState;
+    const { file: croppedFile, dataUrl } = await getCroppedImg(cropState.imageUrl, croppedAreaPixels);
+    if (side === 'front') {
+      setPhotoFront(croppedFile);
+      setPhotoFrontPreview(dataUrl);
+    } else {
+      setPhotoBack(croppedFile);
+      setPhotoBackPreview(dataUrl);
+    }
+    setCropState(null);
+    scanPhoto(croppedFile, side);
+  };
+
+  const handleCropSkip = () => {
+    if (!cropState) return;
+    const { imageUrl, side } = cropState;
+    // Convert data URL to file without cropping
+    fetch(imageUrl).then(r => r.blob()).then(blob => {
+      const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
       if (side === 'front') {
         setPhotoFront(file);
-        reader.onloadend = () => setPhotoFrontPreview(reader.result);
+        setPhotoFrontPreview(imageUrl);
       } else {
         setPhotoBack(file);
-        reader.onloadend = () => setPhotoBackPreview(reader.result);
+        setPhotoBackPreview(imageUrl);
       }
-      reader.readAsDataURL(file);
+      setCropState(null);
       scanPhoto(file, side);
-    }
+    });
   };
 
   const handleAnalyzeWithData = async (data) => {
@@ -1146,6 +1216,41 @@ function App() {
         {view === 'add' && renderAddForm()}
         {view === 'detail' && renderDetail()}
         {view === 'batch' && renderBatchView()}
+
+        {/* Crop Modal */}
+        {cropState && (
+          <div className="crop-modal">
+            <div className="crop-container">
+              <Cropper
+                image={cropState.imageUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={3 / 2}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_, area) => setCroppedAreaPixels(area)}
+              />
+            </div>
+            <div className="crop-controls">
+              <label className="crop-zoom-label">
+                Zoom
+                <input
+                  type="range" min={1} max={3} step={0.1}
+                  value={zoom} onChange={e => setZoom(Number(e.target.value))}
+                  className="crop-zoom"
+                />
+              </label>
+              <div className="crop-actions">
+                <button className="btn-secondary" onClick={handleCropSkip}>
+                  Skip Crop
+                </button>
+                <button className="btn-primary" onClick={handleCropComplete}>
+                  Crop & Scan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -690,6 +690,64 @@ textarea { resize: vertical; min-height: 56px; }
   .error-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* ─── Crop Modal ────────────────────────────────── */
+.crop-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+.crop-container {
+  position: relative;
+  flex: 1;
+}
+.crop-controls {
+  background: #111;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.crop-zoom-label {
+  color: #aaa;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.crop-zoom {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+  outline: none;
+}
+.crop-zoom::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #c5a44e;
+  cursor: pointer;
+}
+.crop-actions {
+  display: flex;
+  gap: 12px;
+}
+.crop-actions .btn-secondary {
+  flex: 1;
+  background: #222;
+  color: #fff;
+  border-color: #555;
+}
+.crop-actions .btn-secondary:hover { background: #333; }
+.crop-actions .btn-primary { flex: 1; }
+
 /* ─── Batch Scan ────────────────────────────────── */
 .batch-view h2 { color: #1a472a; margin: 0 0 6px; font-weight: 700; font-size: 1.3rem; }
 .batch-photo-wrap {
