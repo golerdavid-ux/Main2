@@ -1,18 +1,9 @@
 /**
  * POST /api/notes/scan
  * Upload a photo of a banknote and extract details using Workers AI vision model.
+ * Uses @cf/unum/uform-gen2-qwen-500m (no license needed) for image-to-text,
+ * then @cf/meta/llama-3.1-8b-instruct to parse the description into structured data.
  */
-
-async function ensureLicenseAccepted(ai) {
-  try {
-    await ai.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-      messages: [{ role: 'user', content: 'agree' }],
-      max_tokens: 1,
-    });
-  } catch {
-    // Already accepted or other error — continue anyway
-  }
-}
 
 export async function onRequestPost(context) {
   try {
@@ -32,68 +23,58 @@ export async function onRequestPost(context) {
       return Response.json({ error: 'Please upload a photo as multipart/form-data' }, { status: 400 });
     }
 
-    const frontPrompt = `You are analyzing a photo of the FRONT (obverse) of a U.S. banknote (paper currency). Extract the following details. Be precise and only report what you can clearly see.
+    // Step 1: Use vision model to describe the banknote image
+    const describePrompt = side === 'front'
+      ? 'Describe this U.S. banknote in detail. Include the denomination, series year, serial number, signatures, seal color, and any notable features or errors you can see.'
+      : 'Describe the back of this U.S. banknote in detail. Include the denomination and any notable features, errors, or condition details you can see.';
 
-Return ONLY a JSON object with these fields (use empty string "" if you cannot determine a field):
-{
-  "denomination": "the face value as a number, e.g. 1, 5, 10, 20, 50, 100",
-  "seriesYear": "the series year printed on the note, e.g. 2013 or 2017A",
-  "serialNumber": "the full serial number including any letters and star symbol if present",
-  "treasurerSignature": "name of the Treasurer of the United States printed on the note",
-  "secretarySignature": "name of the Secretary of the Treasury printed on the note",
-  "errors": "any visible printing errors like miscut, misalignment, ink smear, or empty array []",
-  "condition": "brief description of the note's physical condition, e.g. crisp uncirculated, light fold, heavily worn"
-}
-
-Return ONLY the JSON object, no other text.`;
-
-    const backPrompt = `You are analyzing a photo of the BACK (reverse) of a U.S. banknote (paper currency). Extract any details visible on this side. Be precise and only report what you can clearly see.
-
-Return ONLY a JSON object with these fields (use empty string "" if you cannot determine a field):
-{
-  "denomination": "the face value as a number if visible, e.g. 1, 5, 10, 20, 50, 100",
-  "errors": "any visible printing errors like miscut, misalignment, ink smear, inverted back, or empty array []",
-  "condition": "brief description of the note's physical condition from the back, e.g. crisp uncirculated, light fold, stains, heavily worn"
-}
-
-Return ONLY the JSON object, no other text.`;
-
-    const prompt = side === 'back' ? backPrompt : frontPrompt;
-
-    // Accept the Llama license if needed (one-time)
-    await ensureLicenseAccepted(context.env.AI);
-
-    const response = await context.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        }
-      ],
+    const visionResult = await context.env.AI.run('@cf/unum/uform-gen2-qwen-500m', {
+      prompt: describePrompt,
       image: imageBytes,
-      max_tokens: 512,
     });
 
-    const text = response.response || '';
+    const description = visionResult.description || visionResult.response || '';
+
+    // Step 2: Use text model to extract structured data from the description
+    const extractPrompt = side === 'front'
+      ? `You are a U.S. currency expert. Based on this description of the front of a banknote, extract the details into a JSON object.
+
+Description: "${description}"
+
+Return ONLY a valid JSON object with these fields (use empty string "" if not mentioned):
+{"denomination":"number only e.g. 1 5 10 20 50 100","seriesYear":"e.g. 2013 or 2017A","serialNumber":"full serial including letters and star if present","treasurerSignature":"name of Treasurer","secretarySignature":"name of Secretary","errors":"any printing errors or empty string","condition":"physical condition"}
+
+JSON only, no other text:`
+      : `You are a U.S. currency expert. Based on this description of the back of a banknote, extract details into a JSON object.
+
+Description: "${description}"
+
+Return ONLY a valid JSON object with these fields (use empty string "" if not mentioned):
+{"denomination":"number only e.g. 1 5 10 20 50 100","errors":"any printing errors or empty string","condition":"physical condition"}
+
+JSON only, no other text:`;
+
+    const textResult = await context.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [{ role: 'user', content: extractPrompt }],
+      max_tokens: 300,
+    });
+
+    const text = textResult.response || '';
 
     // Try to parse JSON from the response
     let extracted = {};
     try {
-      // Find JSON in the response (it might have extra text around it)
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = text.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         extracted = JSON.parse(jsonMatch[0]);
       }
-    } catch (parseError) {
-      extracted = {
-        raw: text,
-        parseError: 'Could not parse structured data. Check the raw response.',
-      };
+    } catch {
+      extracted = { raw: text, description };
     }
 
     // Normalize errors field
     if (typeof extracted.errors === 'string') {
-      if (extracted.errors === '' || extracted.errors === '[]') {
+      if (extracted.errors === '' || extracted.errors === '[]' || extracted.errors.toLowerCase() === 'none') {
         extracted.errors = [];
       } else {
         extracted.errors = [extracted.errors];
@@ -106,6 +87,7 @@ Return ONLY the JSON object, no other text.`;
     return Response.json({
       success: true,
       extracted,
+      description,
       message: extracted.denomination
         ? `I found a $${extracted.denomination} note! Review the details and make any corrections.`
         : 'I analyzed the photo. Please review and fill in any missing details.',
