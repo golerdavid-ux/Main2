@@ -81,6 +81,7 @@ Return ONLY the JSON object, no other text.`;
           generationConfig: {
             temperature: 0.1,
             maxOutputTokens: 512,
+            responseMimeType: 'application/json',
           },
         }),
       }

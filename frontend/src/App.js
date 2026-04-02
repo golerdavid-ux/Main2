@@ -90,7 +90,7 @@ function App() {
     }));
   };
 
-  const resizeImage = (file, maxDim = 512) => {
+  const resizeImage = (file, maxDim = 1536) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -109,7 +109,7 @@ function App() {
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob((blob) => {
           resolve(new File([blob], 'note.jpg', { type: 'image/jpeg' }));
-        }, 'image/jpeg', 0.6);
+        }, 'image/jpeg', 0.85);
       };
       img.src = URL.createObjectURL(file);
     });
