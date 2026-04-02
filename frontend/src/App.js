@@ -33,6 +33,7 @@ function App() {
   const [cropState, setCropState] = useState(null); // { imageUrl, side }
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -190,19 +191,50 @@ function App() {
     }
   };
 
-  const getCroppedImg = (imageSrc, pixelCrop) => {
+  const getCroppedImg = (imageSrc, pixelCrop, rotationDeg = 0) => {
     return new Promise((resolve) => {
       const image = new Image();
       image.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = pixelCrop.width;
-        canvas.height = pixelCrop.height;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(
-          image,
-          pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-          0, 0, pixelCrop.width, pixelCrop.height
-        );
+
+        if (rotationDeg === 0) {
+          canvas.width = pixelCrop.width;
+          canvas.height = pixelCrop.height;
+          ctx.drawImage(
+            image,
+            pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+            0, 0, pixelCrop.width, pixelCrop.height
+          );
+        } else {
+          // For rotated images, react-easy-crop already accounts for rotation
+          // in pixelCrop coordinates, so we just need to draw the full rotated
+          // image and then extract the crop area
+          const radians = (rotationDeg * Math.PI) / 180;
+          const sin = Math.abs(Math.sin(radians));
+          const cos = Math.abs(Math.cos(radians));
+          const bW = image.width * cos + image.height * sin;
+          const bH = image.width * sin + image.height * cos;
+
+          // Draw rotated full image onto temp canvas
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = bW;
+          tempCanvas.height = bH;
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCtx.translate(bW / 2, bH / 2);
+          tempCtx.rotate(radians);
+          tempCtx.drawImage(image, -image.width / 2, -image.height / 2);
+
+          // Now crop from the rotated image
+          canvas.width = pixelCrop.width;
+          canvas.height = pixelCrop.height;
+          ctx.drawImage(
+            tempCanvas,
+            pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+            0, 0, pixelCrop.width, pixelCrop.height
+          );
+        }
+
         canvas.toBlob((blob) => {
           resolve({
             file: new File([blob], 'cropped.jpg', { type: 'image/jpeg' }),
@@ -222,6 +254,7 @@ function App() {
         setCropState({ imageUrl: reader.result, side });
         setCrop({ x: 0, y: 0 });
         setZoom(1);
+        setRotation(0);
       };
       reader.readAsDataURL(file);
     }
@@ -230,7 +263,7 @@ function App() {
   const handleCropComplete = async () => {
     if (!cropState || !croppedAreaPixels) return;
     const { side } = cropState;
-    const { file: croppedFile, dataUrl } = await getCroppedImg(cropState.imageUrl, croppedAreaPixels);
+    const { file: croppedFile, dataUrl } = await getCroppedImg(cropState.imageUrl, croppedAreaPixels, rotation);
     if (side === 'front') {
       setPhotoFront(croppedFile);
       setPhotoFrontPreview(dataUrl);
@@ -1310,21 +1343,42 @@ function App() {
                 image={cropState.imageUrl}
                 crop={crop}
                 zoom={zoom}
+                rotation={rotation}
                 aspect={3 / 2}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
+                onRotationChange={setRotation}
                 onCropComplete={(_, area) => setCroppedAreaPixels(area)}
               />
             </div>
             <div className="crop-controls">
-              <label className="crop-zoom-label">
-                Zoom
-                <input
-                  type="range" min={1} max={3} step={0.1}
-                  value={zoom} onChange={e => setZoom(Number(e.target.value))}
-                  className="crop-zoom"
-                />
-              </label>
+              <div className="crop-sliders">
+                <label className="crop-zoom-label">
+                  Zoom
+                  <input
+                    type="range" min={1} max={3} step={0.1}
+                    value={zoom} onChange={e => setZoom(Number(e.target.value))}
+                    className="crop-zoom"
+                  />
+                </label>
+                <label className="crop-zoom-label">
+                  Rotate
+                  <input
+                    type="range" min={0} max={360} step={1}
+                    value={rotation} onChange={e => setRotation(Number(e.target.value))}
+                    className="crop-zoom"
+                  />
+                  <span className="crop-rotation-value">{rotation}°</span>
+                </label>
+              </div>
+              <div className="crop-rotate-buttons">
+                <button className="btn-rotate" onClick={() => setRotation(r => (r + 90) % 360)}>
+                  Rotate 90°
+                </button>
+                <button className="btn-rotate" onClick={() => setRotation(r => (r + 180) % 360)}>
+                  Rotate 180°
+                </button>
+              </div>
               <div className="crop-actions">
                 <button className="btn-secondary" onClick={handleCropSkip}>
                   Skip Crop

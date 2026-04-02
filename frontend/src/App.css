@@ -747,6 +747,36 @@ textarea { resize: vertical; min-height: 56px; }
 }
 .crop-actions .btn-secondary:hover { background: #333; }
 .crop-actions .btn-primary { flex: 1; }
+.crop-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.crop-rotation-value {
+  color: #c5a44e;
+  font-size: 0.82rem;
+  min-width: 36px;
+  text-align: right;
+}
+.crop-rotate-buttons {
+  display: flex;
+  gap: 10px;
+}
+.btn-rotate {
+  flex: 1;
+  padding: 8px 12px;
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-rotate:hover {
+  background: #444;
+}
 
 /* ─── Batch Scan ────────────────────────────────── */
 .batch-view h2 { color: #1a472a; margin: 0 0 6px; font-weight: 700; font-size: 1.3rem; }
