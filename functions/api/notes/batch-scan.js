@@ -39,6 +39,7 @@ Return ONLY a valid JSON array where each element represents one banknote:
   {
     "denomination": "face value as just a number, e.g. 1, 5, 20, 100",
     "seriesYear": "the exact series year, e.g. 2013 or 2017A",
+    "noteType": "the type of note, e.g. Federal Reserve Note, Silver Certificate, Gold Certificate, United States Note",
     "serialNumber": "the EXACT full serial number if readable. Include prefix letters, all digits, suffix letter, and star if present.",
     "treasurerSignature": "full name if readable",
     "secretarySignature": "full name if readable",

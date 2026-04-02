@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
   denomination TEXT NOT NULL,
   series_year TEXT NOT NULL,
+  note_type TEXT DEFAULT '',
   serial_number TEXT DEFAULT '',
   treasurer_signature TEXT DEFAULT '',
   secretary_signature TEXT DEFAULT '',

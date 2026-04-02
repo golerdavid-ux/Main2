@@ -5,6 +5,7 @@ function rowToNote(row) {
     id: row.id,
     denomination: row.denomination,
     seriesYear: row.series_year,
+    noteType: row.note_type || '',
     serialNumber: row.serial_number,
     treasurerSignature: row.treasurer_signature,
     secretarySignature: row.secretary_signature,
@@ -106,16 +107,17 @@ export async function onRequestPut(context) {
     const friedberg = analysis.friedbergNumber || updates.friedbergNumber || existing.friedberg_number;
 
     await context.env.DB.prepare(`
-      UPDATE notes SET denomination=?, series_year=?, serial_number=?,
-        treasurer_signature=?, secretary_signature=?, friedberg_number=?,
-        is_star_note=?, fancy_serials=?, errors=?, grade=?, grader=?,
-        cert_number=?, grading_comments=?, estimated_value=?, cost_paid=?,
-        photo_front_key=?, photo_back_key=?, photo_front_base64=?,
-        photo_back_base64=?, flags=?, user_notes=?
+      UPDATE notes SET denomination=?, series_year=?, note_type=?,
+        serial_number=?, treasurer_signature=?, secretary_signature=?,
+        friedberg_number=?, is_star_note=?, fancy_serials=?, errors=?,
+        grade=?, grader=?, cert_number=?, grading_comments=?,
+        estimated_value=?, cost_paid=?, photo_front_key=?, photo_back_key=?,
+        photo_front_base64=?, photo_back_base64=?, flags=?, user_notes=?
       WHERE id=?
     `).bind(
       denomination,
       seriesYear,
+      updates.noteType || existing.note_type || '',
       serialNumber,
       updates.treasurerSignature || existing.treasurer_signature,
       updates.secretarySignature || existing.secretary_signature,

@@ -32,17 +32,18 @@ export async function onRequestPost(context) {
       const friedberg = analysis.friedbergNumber || noteData.friedbergNumber || '';
 
       await context.env.DB.prepare(`
-        INSERT INTO notes (id, denomination, series_year, serial_number,
+        INSERT INTO notes (id, denomination, series_year, note_type, serial_number,
           treasurer_signature, secretary_signature, friedberg_number,
           is_star_note, fancy_serials, errors, grade, grader, cert_number,
           grading_comments, estimated_value, cost_paid, photo_front_key,
           photo_back_key, photo_front_base64, photo_back_base64,
           flags, user_notes, date_added)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         id,
         noteData.denomination || '',
         noteData.seriesYear || '',
+        noteData.noteType || '',
         noteData.serialNumber || '',
         noteData.treasurerSignature || '',
         noteData.secretarySignature || '',

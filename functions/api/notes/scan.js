@@ -40,6 +40,7 @@ Return ONLY a valid JSON object with these fields (use empty string "" if you ca
 {
   "denomination": "the face value as just a number, e.g. 1, 5, 10, 20, 50, 100",
   "seriesYear": "the exact series year printed on the note, e.g. 2013 or 2017A",
+  "noteType": "the type of note printed on the bill, e.g. Federal Reserve Note, Silver Certificate, Gold Certificate, United States Note, National Bank Note, Treasury Note, Federal Reserve Bank Note",
   "serialNumber": "the EXACT full serial number including all letters, digits, and star symbol if present. Read every character carefully.",
   "treasurerSignature": "full name of the Treasurer of the United States printed on the note",
   "secretarySignature": "full name of the Secretary of the Treasury printed on the note",

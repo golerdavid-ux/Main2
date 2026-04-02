@@ -67,7 +67,7 @@ export async function onRequestPost(context) {
     }
 
     // Get all notes from D1
-    const { results } = await context.env.DB.prepare(`SELECT id, denomination, series_year, serial_number,
+    const { results } = await context.env.DB.prepare(`SELECT id, denomination, series_year, note_type, serial_number,
       treasurer_signature, secretary_signature, friedberg_number, is_star_note,
       fancy_serials, errors, grade, grader, cert_number, grading_comments,
       estimated_value, cost_paid, photo_front_key, photo_back_key,
@@ -85,7 +85,7 @@ export async function onRequestPost(context) {
     // Build rows: header + data
     const headers = [
       'Photo (Front)', 'Photo (Back)',
-      'Denomination', 'Series Year', 'Serial Number',
+      'Denomination', 'Series Year', 'Note Type', 'Serial Number',
       'Friedberg #', 'Star Note', 'Fancy Serials', 'Errors',
       'Treasurer', 'Secretary',
       'Grade', 'Grader', 'Cert #', 'Grading Comments',
@@ -97,6 +97,7 @@ export async function onRequestPost(context) {
       r.photo_back_base64 ? `=IMAGE("${siteUrl}/api/photos/note/${r.id}/back", 1)` : '',
       `$${r.denomination}`,
       r.series_year,
+      r.note_type || '',
       r.serial_number,
       r.friedberg_number,
       r.is_star_note ? 'Yes' : 'No',

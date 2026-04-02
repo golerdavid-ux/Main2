@@ -31,6 +31,7 @@ function App() {
   const [formData, setFormData] = useState({
     denomination: '',
     seriesYear: '',
+    noteType: '',
     serialNumber: '',
     treasurerSignature: '',
     secretarySignature: '',
@@ -67,7 +68,7 @@ function App() {
 
   const resetForm = () => {
     setFormData({
-      denomination: '', seriesYear: '', serialNumber: '',
+      denomination: '', seriesYear: '', noteType: '', serialNumber: '',
       treasurerSignature: '', secretarySignature: '', friedbergNumber: '',
       errors: [], grade: '', grader: '', certNumber: '',
       gradingComments: '', estimatedValue: '', costPaid: '', notes: '',
@@ -138,6 +139,7 @@ function App() {
           ...prev,
           denomination: ext.denomination || prev.denomination,
           seriesYear: ext.seriesYear || prev.seriesYear,
+          noteType: ext.noteType || prev.noteType,
           serialNumber: ext.serialNumber || prev.serialNumber,
           treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
           secretarySignature: ext.secretarySignature || prev.secretarySignature,
@@ -360,6 +362,7 @@ function App() {
     setEditData({
       denomination: note.denomination || '',
       seriesYear: note.seriesYear || '',
+      noteType: note.noteType || '',
       serialNumber: note.serialNumber || '',
       treasurerSignature: note.treasurerSignature || '',
       secretarySignature: note.secretarySignature || '',
@@ -499,6 +502,7 @@ function App() {
             <div className="detail-info">
               <div className="info-section">
                 <h3>Identification</h3>
+                {n.noteType && <div className="info-row"><span>Type:</span><span>{n.noteType}</span></div>}
                 <div className="info-row"><span>Serial Number:</span><span>{n.serialNumber || 'N/A'}</span></div>
                 <div className="info-row"><span>Friedberg #:</span><span>{n.friedbergNumber || 'N/A'}</span></div>
                 <div className="info-row"><span>Treasurer:</span><span>{n.treasurerSignature || 'N/A'}</span></div>
@@ -564,6 +568,12 @@ function App() {
                 <div className="form-group">
                   <label>Series Year</label>
                   <input name="seriesYear" value={editData.seriesYear} onChange={handleEditChange} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Note Type</label>
+                  <input name="noteType" value={editData.noteType} onChange={handleEditChange} placeholder="e.g., Federal Reserve Note" />
                 </div>
               </div>
               <div className="form-row">
@@ -737,6 +747,15 @@ function App() {
               <input
                 type="text" name="seriesYear" value={formData.seriesYear}
                 onChange={handleInputChange} placeholder="e.g., 2013 or 2017A" required
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Note Type</label>
+              <input
+                type="text" name="noteType" value={formData.noteType}
+                onChange={handleInputChange} placeholder="e.g., Federal Reserve Note"
               />
             </div>
           </div>
@@ -964,6 +983,9 @@ function App() {
                   ${note.denomination} - Series {note.seriesYear}
                   {note.isStarNote && <span className="star-badge-sm">Star</span>}
                 </div>
+                {note.noteType && (
+                  <div className="card-type">{note.noteType}</div>
+                )}
                 {note.serialNumber && (
                   <div className="card-serial">{note.serialNumber}</div>
                 )}
@@ -1057,6 +1079,10 @@ function App() {
                     </div>
                   </div>
                   <div className="form-row">
+                    <div className="form-group">
+                      <label>Note Type</label>
+                      <input value={note.noteType || ''} onChange={e => handleBatchNoteChange(i, 'noteType', e.target.value)} />
+                    </div>
                     <div className="form-group">
                       <label>Serial Number</label>
                       <input value={note.serialNumber || ''} onChange={e => handleBatchNoteChange(i, 'serialNumber', e.target.value)} />

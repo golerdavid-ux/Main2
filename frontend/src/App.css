@@ -276,6 +276,13 @@ h1::before {
   align-items: center;
   gap: 8px;
 }
+.card-type {
+  color: #8b7a3e;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-bottom: 3px;
+  font-style: italic;
+}
 .card-serial {
   color: #888;
   font-size: 0.78rem;

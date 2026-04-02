@@ -5,10 +5,10 @@ import { analyzeNote, generateId } from '../_currency.js';
  */
 export async function onRequestGet(context) {
   const db = context.env.DB;
-  const { results } = await db.prepare(`SELECT id, denomination, series_year, serial_number,
-    treasurer_signature, secretary_signature, friedberg_number, is_star_note,
-    fancy_serials, errors, grade, grader, cert_number, grading_comments,
-    estimated_value, cost_paid, photo_front_key, photo_back_key,
+  const { results } = await db.prepare(`SELECT id, denomination, series_year, note_type,
+    serial_number, treasurer_signature, secretary_signature, friedberg_number,
+    is_star_note, fancy_serials, errors, grade, grader, cert_number,
+    grading_comments, estimated_value, cost_paid, photo_front_key, photo_back_key,
     CASE WHEN photo_front_base64 != '' THEN 1 ELSE 0 END as has_photo_front,
     CASE WHEN photo_back_base64 != '' THEN 1 ELSE 0 END as has_photo_back,
     flags, user_notes, date_added FROM notes ORDER BY date_added DESC`).all();
@@ -17,6 +17,7 @@ export async function onRequestGet(context) {
     id: row.id,
     denomination: row.denomination,
     seriesYear: row.series_year,
+    noteType: row.note_type || '',
     serialNumber: row.serial_number,
     treasurerSignature: row.treasurer_signature,
     secretarySignature: row.secretary_signature,
@@ -112,17 +113,18 @@ export async function onRequestPost(context) {
     const now = new Date().toISOString();
 
     await context.env.DB.prepare(`
-      INSERT INTO notes (id, denomination, series_year, serial_number,
+      INSERT INTO notes (id, denomination, series_year, note_type, serial_number,
         treasurer_signature, secretary_signature, friedberg_number,
         is_star_note, fancy_serials, errors, grade, grader, cert_number,
         grading_comments, estimated_value, cost_paid, photo_front_key,
         photo_back_key, photo_front_base64, photo_back_base64,
         flags, user_notes, date_added)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       noteData.denomination || '',
       noteData.seriesYear || '',
+      noteData.noteType || '',
       noteData.serialNumber || '',
       noteData.treasurerSignature || '',
       noteData.secretarySignature || '',
