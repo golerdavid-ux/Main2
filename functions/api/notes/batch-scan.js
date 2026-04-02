@@ -128,11 +128,19 @@ IMPORTANT RULES:
       return note;
     });
 
+    const usage = geminiData.usageMetadata || {};
+    const tokenInfo = `${usage.totalTokenCount || '?'} tokens (${usage.promptTokenCount || '?'} in / ${usage.candidatesTokenCount || '?'} out)`;
+
     return Response.json({
       success: true,
       notes,
       count: notes.length,
-      message: `Found ${notes.length} note${notes.length !== 1 ? 's' : ''} in the photo. Review details below.`,
+      tokens: {
+        prompt: usage.promptTokenCount || 0,
+        completion: usage.candidatesTokenCount || 0,
+        total: usage.totalTokenCount || 0,
+      },
+      message: `Found ${notes.length} note${notes.length !== 1 ? 's' : ''} in the photo. ${tokenInfo}`,
     });
 
   } catch (error) {

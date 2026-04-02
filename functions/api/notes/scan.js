@@ -134,17 +134,26 @@ Return ONLY the JSON object, no other text.`;
       extracted.errors = [];
     }
 
+    const usage = geminiData.usageMetadata || {};
+
     const fields = [];
     if (extracted.denomination) fields.push(`$${extracted.denomination}`);
     if (extracted.seriesYear) fields.push(`Series ${extracted.seriesYear}`);
     if (extracted.serialNumber) fields.push(`S/N: ${extracted.serialNumber}`);
 
+    const tokenInfo = `${usage.totalTokenCount || '?'} tokens (${usage.promptTokenCount || '?'} in / ${usage.candidatesTokenCount || '?'} out)`;
+
     return Response.json({
       success: true,
       extracted,
+      tokens: {
+        prompt: usage.promptTokenCount || 0,
+        completion: usage.candidatesTokenCount || 0,
+        total: usage.totalTokenCount || 0,
+      },
       message: fields.length > 0
-        ? `Found: ${fields.join(' | ')}. Review and correct if needed.`
-        : 'I analyzed the photo. Please review and fill in any missing details.',
+        ? `Found: ${fields.join(' | ')}. ${tokenInfo}`
+        : `Analyzed photo. ${tokenInfo}. Review and fill in any missing details.`,
     });
 
   } catch (error) {
