@@ -26,6 +26,9 @@ function App() {
   const [batchBackScanning, setBatchBackScanning] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('dateDesc');
+  const [filters, setFilters] = useState({ denomination: '', noteType: '', starOnly: false, gradedOnly: false, errorsOnly: false });
+  const [showFilters, setShowFilters] = useState(false);
   const [photoFront, setPhotoFront] = useState(null);
   const [photoBack, setPhotoBack] = useState(null);
   const [photoFrontPreview, setPhotoFrontPreview] = useState(null);
@@ -604,15 +607,38 @@ function App() {
   };
 
   const filteredNotes = notes.filter(note => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      (note.denomination && note.denomination.includes(term)) ||
-      (note.seriesYear && note.seriesYear.toLowerCase().includes(term)) ||
-      (note.serialNumber && note.serialNumber.toLowerCase().includes(term)) ||
-      (note.friedbergNumber && note.friedbergNumber.toLowerCase().includes(term)) ||
-      (note.flags && note.flags.some(f => f.toLowerCase().includes(term)))
-    );
+    // Text search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matches = (
+        (note.denomination && note.denomination.includes(term)) ||
+        (note.seriesYear && note.seriesYear.toLowerCase().includes(term)) ||
+        (note.serialNumber && note.serialNumber.toLowerCase().includes(term)) ||
+        (note.noteType && note.noteType.toLowerCase().includes(term)) ||
+        (note.friedbergNumber && note.friedbergNumber.toLowerCase().includes(term)) ||
+        (note.flags && note.flags.some(f => f.toLowerCase().includes(term)))
+      );
+      if (!matches) return false;
+    }
+    // Filters
+    if (filters.denomination && note.denomination !== filters.denomination) return false;
+    if (filters.noteType && (!note.noteType || !note.noteType.toLowerCase().includes(filters.noteType.toLowerCase()))) return false;
+    if (filters.starOnly && !note.isStarNote) return false;
+    if (filters.gradedOnly && !note.grade) return false;
+    if (filters.errorsOnly && (!note.errors || note.errors.length === 0)) return false;
+    return true;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'dateAsc': return (a.id || 0) - (b.id || 0);
+      case 'dateDesc': return (b.id || 0) - (a.id || 0);
+      case 'denomAsc': return (parseFloat(a.denomination) || 0) - (parseFloat(b.denomination) || 0);
+      case 'denomDesc': return (parseFloat(b.denomination) || 0) - (parseFloat(a.denomination) || 0);
+      case 'valueDesc': return (parseFloat(b.estimatedValue) || 0) - (parseFloat(a.estimatedValue) || 0);
+      case 'valueAsc': return (parseFloat(a.estimatedValue) || 0) - (parseFloat(b.estimatedValue) || 0);
+      case 'yearAsc': return (a.seriesYear || '').localeCompare(b.seriesYear || '');
+      case 'yearDesc': return (b.seriesYear || '').localeCompare(a.seriesYear || '');
+      default: return 0;
+    }
   });
 
   const collectionStats = {
@@ -622,6 +648,10 @@ function App() {
     starNotes: notes.filter(n => n.isStarNote).length,
     graded: notes.filter(n => n.grade).length,
   };
+
+  const uniqueDenominations = [...new Set(notes.map(n => n.denomination).filter(Boolean))].sort((a, b) => parseFloat(a) - parseFloat(b));
+  const uniqueNoteTypes = [...new Set(notes.map(n => n.noteType).filter(Boolean))].sort();
+  const activeFilterCount = [filters.denomination, filters.noteType, filters.starOnly, filters.gradedOnly, filters.errorsOnly].filter(Boolean).length;
 
   // ─── Detail View ──────────────────────────────────
   const renderDetail = () => {
@@ -1104,13 +1134,72 @@ function App() {
         </div>
       )}
 
-      {/* Search */}
+      {/* Search, Sort & Filter */}
       {notes.length > 0 && (
-        <div className="search-bar">
-          <input
-            type="text" placeholder="Search notes..."
-            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-          />
+        <div className="search-filter-bar">
+          <div className="search-row">
+            <input
+              type="text" placeholder="Search notes..."
+              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+            <select className="sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="dateDesc">Newest First</option>
+              <option value="dateAsc">Oldest First</option>
+              <option value="denomAsc">Denomination: Low-High</option>
+              <option value="denomDesc">Denomination: High-Low</option>
+              <option value="valueDesc">Value: High-Low</option>
+              <option value="valueAsc">Value: Low-High</option>
+              <option value="yearAsc">Year: Oldest</option>
+              <option value="yearDesc">Year: Newest</option>
+            </select>
+            <button
+              className={`btn-filter-toggle ${activeFilterCount > 0 ? 'active' : ''}`}
+              onClick={() => setShowFilters(f => !f)}
+            >
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </button>
+          </div>
+
+          {showFilters && (
+            <div className="filter-panel">
+              <div className="filter-row">
+                <div className="filter-group">
+                  <label>Denomination</label>
+                  <select value={filters.denomination} onChange={e => setFilters(f => ({ ...f, denomination: e.target.value }))}>
+                    <option value="">All</option>
+                    {uniqueDenominations.map(d => <option key={d} value={d}>${d}</option>)}
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label>Note Type</label>
+                  <select value={filters.noteType} onChange={e => setFilters(f => ({ ...f, noteType: e.target.value }))}>
+                    <option value="">All</option>
+                    {uniqueNoteTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="filter-toggles">
+                <label className="filter-chip">
+                  <input type="checkbox" checked={filters.starOnly} onChange={e => setFilters(f => ({ ...f, starOnly: e.target.checked }))} />
+                  <span>Star Notes</span>
+                </label>
+                <label className="filter-chip">
+                  <input type="checkbox" checked={filters.gradedOnly} onChange={e => setFilters(f => ({ ...f, gradedOnly: e.target.checked }))} />
+                  <span>Graded</span>
+                </label>
+                <label className="filter-chip">
+                  <input type="checkbox" checked={filters.errorsOnly} onChange={e => setFilters(f => ({ ...f, errorsOnly: e.target.checked }))} />
+                  <span>Errors</span>
+                </label>
+                {activeFilterCount > 0 && (
+                  <button className="btn-clear-filters" onClick={() => setFilters({ denomination: '', noteType: '', starOnly: false, gradedOnly: false, errorsOnly: false })}>
+                    Clear All
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

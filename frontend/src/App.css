@@ -183,9 +183,15 @@ h1::before {
 }
 
 /* ─── Search ────────────────────────────────────── */
-.search-bar { margin-bottom: 16px; }
-.search-bar input {
-  width: 100%;
+.search-filter-bar { margin-bottom: 16px; }
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
   padding: 10px 14px;
   border: 1.5px solid #e0dbd0;
   border-radius: 10px;
@@ -195,11 +201,131 @@ h1::before {
   transition: all 0.2s;
   color: #333;
 }
-.search-bar input::placeholder { color: #bbb; }
-.search-bar input:focus {
+.search-input::placeholder { color: #bbb; }
+.search-input:focus {
   outline: none;
   border-color: #1a472a;
   box-shadow: 0 0 0 3px rgba(26, 71, 42, 0.08);
+}
+
+/* Sort Select */
+.sort-select {
+  padding: 10px 12px;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sort-select:focus {
+  outline: none;
+  border-color: #1a472a;
+}
+
+/* Filter Toggle Button */
+.btn-filter-toggle {
+  padding: 10px 14px;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #fff;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-filter-toggle:hover { border-color: #1a472a; color: #1a472a; }
+.btn-filter-toggle.active {
+  background: #1a472a;
+  color: #fff;
+  border-color: #1a472a;
+}
+
+/* Filter Panel */
+.filter-panel {
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: #f5f2eb;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 12px;
+}
+.filter-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.filter-group {
+  flex: 1;
+  min-width: 0;
+}
+.filter-group label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8a9b87;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.filter-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #333;
+}
+.filter-group select:focus { outline: none; border-color: #1a472a; }
+
+/* Filter Chips */
+.filter-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1.5px solid #e0dbd0;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.filter-chip:has(input:checked) {
+  background: #1a472a;
+  color: #fff;
+  border-color: #1a472a;
+}
+.filter-chip input { display: none; }
+.btn-clear-filters {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: #c5a44e;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .search-row { flex-wrap: wrap; }
+  .search-input { width: 100%; }
+  .sort-select { flex: 1; }
+  .btn-filter-toggle { flex: 1; }
+  .filter-row { flex-direction: column; gap: 8px; }
 }
 
 /* ─── Notes Grid ────────────────────────────────── */
