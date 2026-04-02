@@ -848,27 +848,34 @@ textarea { resize: vertical; min-height: 56px; }
 /* ─── Floating Add Button ──────────────────────── */
 .fab-add {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
-  background: linear-gradient(135deg, #c5a44e, #a8893a);
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #c5a44e, #9e7e2e);
   color: #fff;
   border: none;
-  border-radius: 50px;
-  padding: 16px 28px;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  box-shadow: 0 6px 24px rgba(197, 164, 78, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+  border-radius: 60px;
+  padding: 18px 44px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 8px 30px rgba(197, 164, 78, 0.5), 0 3px 10px rgba(0,0,0,0.35);
   cursor: pointer;
   z-index: 100;
   transition: all 0.2s;
+  animation: fab-pulse 2.5s ease-in-out infinite;
 }
 .fab-add:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(197, 164, 78, 0.5), 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 10px 36px rgba(197, 164, 78, 0.6), 0 5px 14px rgba(0,0,0,0.35);
 }
 .fab-add:active {
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
+}
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 8px 30px rgba(197, 164, 78, 0.5), 0 3px 10px rgba(0,0,0,0.35); }
+  50% { box-shadow: 0 8px 40px rgba(197, 164, 78, 0.7), 0 3px 14px rgba(0,0,0,0.4); }
 }
 
 /* ─── Batch Photos Row ─────────────────────────── */

@@ -1067,10 +1067,6 @@ function App() {
         </div>
         {notes.length > 0 && (
           <div className="header-secondary">
-            <button className="btn-text" onClick={handleSyncSheets} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Sync to Sheets'}
-            </button>
-            <span className="header-divider">|</span>
             <button className="btn-text" onClick={handleExportCSV}>
               Export CSV
             </button>
