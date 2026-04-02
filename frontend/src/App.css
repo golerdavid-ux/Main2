@@ -124,15 +124,17 @@ h1::before {
 .btn-text {
   background: none;
   border: none;
-  color: #8a9b87;
+  color: #c5a44e;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 4px 0;
   font-family: inherit;
   transition: color 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
-.btn-text:hover { color: #1a472a; }
+.btn-text:hover { color: #a8893a; }
 .btn-text:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-add {
   padding: 10px 20px;
