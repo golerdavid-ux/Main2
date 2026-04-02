@@ -14,3 +14,7 @@ database_id = "8c9878a2-fc23-47b1-a47d-41112eff9736"
 # [[r2_buckets]]
 # binding = "PHOTOS"
 # bucket_name = "money-book-photos"
+
+# Workers AI for image scanning
+[ai]
+binding = "AI"

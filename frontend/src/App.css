@@ -240,11 +240,30 @@ textarea { resize: vertical; min-height: 60px; }
 .upload-icon { font-size: 2rem; font-weight: 300; }
 .upload-hint { font-size: 0.8rem; color: #aaa; }
 .photo-preview { position: relative; text-align: center; }
+.photo-preview { position: relative; display: inline-block; }
 .photo-preview img {
   max-width: 100%;
   max-height: 300px;
   border-radius: 8px;
   border: 2px solid #d5d0c0;
+}
+.scanning-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(26, 71, 42, 0.7);
+  color: #c5a44e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 .btn-remove-photo {
   display: block;

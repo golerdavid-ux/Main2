@@ -18,6 +18,7 @@ function App() {
   const [view, setView] = useState('collection'); // 'collection' | 'add' | 'detail'
   const [selectedNote, setSelectedNote] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [photo, setPhoto] = useState(null);
@@ -85,6 +86,51 @@ function App() {
     }));
   };
 
+  const scanPhoto = async (file) => {
+    setScanning(true);
+    showMessage('Scanning your note... hang tight!', 'info');
+    try {
+      const body = new FormData();
+      body.append('photo', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/notes/scan`, {
+        method: 'POST',
+        body,
+      });
+      const data = await response.json();
+
+      if (data.success && data.extracted) {
+        const ext = data.extracted;
+        setFormData(prev => ({
+          ...prev,
+          denomination: ext.denomination || prev.denomination,
+          seriesYear: ext.seriesYear || prev.seriesYear,
+          serialNumber: ext.serialNumber || prev.serialNumber,
+          treasurerSignature: ext.treasurerSignature || prev.treasurerSignature,
+          secretarySignature: ext.secretarySignature || prev.secretarySignature,
+          errors: (ext.errors && ext.errors.length > 0) ? ext.errors : prev.errors,
+        }));
+        showMessage(data.message, 'success');
+
+        // Auto-run analysis for Friedberg # and fancy serials
+        if (ext.denomination && ext.seriesYear) {
+          setTimeout(() => handleAnalyzeWithData({
+            ...formData,
+            denomination: ext.denomination,
+            seriesYear: ext.seriesYear,
+            serialNumber: ext.serialNumber || formData.serialNumber,
+          }), 500);
+        }
+      } else {
+        showMessage(data.error || 'Could not read the note. Try a clearer photo with more light.', 'error');
+      }
+    } catch (error) {
+      showMessage('Photo scan failed. You can still enter details manually.', 'error');
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -92,15 +138,16 @@ function App() {
       const reader = new FileReader();
       reader.onloadend = () => setPhotoPreview(reader.result);
       reader.readAsDataURL(file);
+      scanPhoto(file);
     }
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyzeWithData = async (data) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notes/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       });
       const analysis = await response.json();
 
@@ -126,6 +173,8 @@ function App() {
       showMessage('Failed to analyze note', 'error');
     }
   };
+
+  const handleAnalyze = () => handleAnalyzeWithData(formData);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -299,9 +348,12 @@ function App() {
             {photoPreview ? (
               <div className="photo-preview">
                 <img src={photoPreview} alt="Note preview" />
-                <button type="button" className="btn-remove-photo" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
-                  Remove Photo
-                </button>
+                {scanning && <div className="scanning-overlay">Scanning...</div>}
+                {!scanning && (
+                  <button type="button" className="btn-remove-photo" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
+                    Remove Photo
+                  </button>
+                )}
               </div>
             ) : (
               <label className="upload-label">
@@ -309,7 +361,7 @@ function App() {
                 <div className="upload-placeholder">
                   <span className="upload-icon">+</span>
                   <span>Upload a photo of your note</span>
-                  <span className="upload-hint">JPG, PNG, or WEBP up to 10MB</span>
+                  <span className="upload-hint">I'll scan it and fill in the details automatically</span>
                 </div>
               </label>
             )}
