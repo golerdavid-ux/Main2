@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const DENOMINATIONS = ['1', '2', '5', '10', '20', '50', '100'];
 
@@ -218,10 +218,10 @@ function App() {
         </div>
 
         <div className="detail-grid">
-          {n.photoFilename && (
+          {n.photoKey && (
             <div className="detail-photo">
               <img
-                src={`${API_BASE_URL}/uploads/${n.photoFilename}`}
+                src={`${API_BASE_URL}/api/photos/${n.photoKey.replace('notes/', '')}`}
                 alt={`$${n.denomination} Series ${n.seriesYear}`}
               />
             </div>
@@ -538,10 +538,10 @@ function App() {
               className="note-card"
               onClick={() => { setSelectedNote(note); setView('detail'); }}
             >
-              {note.photoFilename ? (
+              {note.photoKey ? (
                 <div className="card-photo">
                   <img
-                    src={`${API_BASE_URL}/uploads/${note.photoFilename}`}
+                    src={`${API_BASE_URL}/api/photos/${note.photoKey.replace('notes/', '')}`}
                     alt={`$${note.denomination}`}
                   />
                 </div>
