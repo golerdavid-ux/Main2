@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly AI Memo — Cut through the noise. See what AI actually does.</title>
+<meta name="description" content="One memo a week. Honest takes on AI developments, tools tested firsthand, and practical tips you can use the same day.">
+<meta property="og:title" content="Weekly AI Memo">
+<meta property="og:description" content="Cut through the noise. See what AI actually does.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Outfit"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
+      colors: {
+        surface: { DEFAULT: '#141416', elevated: '#1C1C1F', high: '#252528' },
+        primary: { DEFAULT: '#A78BFA', hover: '#C4B5FD', dim: '#7C3AED' },
+        accent: { DEFAULT: '#34D399', dim: '#059669' },
+        border: { DEFAULT: '#27272A', subtle: '#1F1F23' },
+      },
+    }
+  }
+}
+</script>
+
+<style>
+  :root {
+    --color-bg: #09090B;
+    --color-surface: #141416;
+    --color-surface-elevated: #1C1C1F;
+    --color-text: #FAFAFA;
+    --color-text-secondary: #71717A;
+    --color-primary: #A78BFA;
+    --color-primary-hover: #C4B5FD;
+    --color-accent: #34D399;
+    --color-border: #27272A;
+    --color-border-subtle: #1F1F23;
+  }
+
+  .light {
+    --color-bg: #FAFAFA;
+    --color-surface: #FFFFFF;
+    --color-surface-elevated: #F4F4F5;
+    --color-text: #09090B;
+    --color-text-secondary: #71717A;
+    --color-primary: #7C3AED;
+    --color-primary-hover: #6D28D9;
+    --color-accent: #059669;
+    --color-border: #E4E4E7;
+    --color-border-subtle: #F4F4F5;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  .reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glow-btn {
+    transition: all 0.3s ease;
+  }
+
+  .glow-btn:hover {
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.3), 0 0 60px rgba(167, 139, 250, 0.1);
+  }
+
+  .card-hover {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(0,0,0,0.4);
+    border-color: rgba(167, 139, 250, 0.3);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #A78BFA 0%, #34D399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-blur {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  input::placeholder {
+    color: var(--color-text-secondary);
+  }
+
+  /* Grid background */
+  .grid-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(rgba(167,139,250,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(167,139,250,0.02) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 0;
+  }
+</style>
+</head>
+
+<body class="grid-bg">
+
+<!-- Skip to content -->
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded">Skip to content</a>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur border-b" style="background: rgba(9,9,11,0.8); border-color: var(--color-border-subtle);">
+  <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+    <span class="font-semibold text-lg tracking-tight" style="color: var(--color-text);">Weekly AI Memo</span>
+    <div class="flex items-center gap-4">
+      <button onclick="toggleDark()" aria-label="Toggle dark mode" class="p-2 rounded-lg hover:bg-white/5 transition-colors" style="color: var(--color-text-secondary);">
+        <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+        <svg class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+      </button>
+      <a href="#subscribe" class="glow-btn px-5 py-2 rounded-lg text-sm font-medium" style="background: var(--color-primary); color: #fff;">Subscribe</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<main id="main">
+<section class="min-h-screen flex items-center pt-16 relative">
+  <div class="max-w-5xl mx-auto px-6 py-24 relative z-10">
+    <div class="max-w-2xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-8" style="background: var(--color-surface-elevated); border: 1px solid var(--color-border); color: var(--color-primary);">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+        Published weekly on Substack
+      </div>
+
+      <h1 class="hero-title text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight mb-6" style="color: var(--color-text);">
+        <span class="word">Cut through</span><br>
+        <span class="word">the noise.</span><br>
+        <span class="word gradient-text">See what AI</span><br>
+        <span class="word gradient-text">actually does.</span>
+      </h1>
+
+      <p class="text-lg md:text-xl leading-relaxed mb-10 max-w-lg" style="color: var(--color-text-secondary);">
+        One memo a week. My honest take on AI developments, tools I'm personally testing, and practical tips you can use the same day.
+      </p>
+
+      <div id="subscribe" class="max-w-md">
+        <iframe src="https://davidgoler.substack.com/embed" width="100%" height="150" style="border: none; background: transparent;" frameborder="0" scrolling="no"></iframe>
+      </div>
+
+      <p class="mt-2 text-sm" style="color: var(--color-text-secondary);">Free &middot; Every week &middot; No spam</p>
+    </div>
+  </div>
+  <!-- Ambient glow -->
+  <div class="absolute top-1/4 right-0 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none" style="background: var(--color-primary);"></div>
+  <div class="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none" style="background: var(--color-accent);"></div>
+</section>
+
+<!-- WHAT YOU GET -->
+<section class="py-24 md:py-32 reveal">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-16 items-start">
+      <div>
+        <p class="text-xs font-semibold tracking-[0.25em] uppercase mb-5" style="color: var(--color-primary);">What You Get</p>
+        <h2 class="text-3xl md:text-4xl font-bold leading-tight mb-6" style="color: var(--color-text);">Not another AI newsletter. A working notebook.</h2>
+        <p class="text-base leading-relaxed" style="color: var(--color-text-secondary);">
+          Most AI newsletters rehash the same headlines. This one is different. Every issue comes from hands-on experience, tools I've actually used, and observations from someone paying close attention to how this technology changes real work.
+        </p>
+      </div>
+
+      <div class="space-y-0">
+        <div class="feature-card card-hover p-6 border-t" style="border-color: var(--color-border);">
+          <span class="font-mono text-sm" style="color: var(--color-primary);">01</span>
+          <h3 class="text-base font-semibold mt-2 mb-1.5" style="color: var(--color-text);">My perspective</h3>
+          <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">Commentary on AI developments that matter to your day-to-day. Signal, not noise.</p>
+        </div>
+        <div class="feature-card card-hover p-6 border-t" style="border-color: var(--color-border);">
+          <span class="font-mono text-sm" style="color: var(--color-primary);">02</span>
+          <h3 class="text-base font-semibold mt-2 mb-1.5" style="color: var(--color-text);">Tools I've tested</h3>
+          <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">Honest reviews from real use. I try things before I recommend them.</p>
+        </div>
+        <div class="feature-card card-hover p-6 border-t border-b" style="border-color: var(--color-border);">
+          <span class="font-mono text-sm" style="color: var(--color-primary);">03</span>
+          <h3 class="text-base font-semibold mt-2 mb-1.5" style="color: var(--color-text);">Something actionable</h3>
+          <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">A workflow, a setup guide, a use case. Something concrete you can try right away.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PULLQUOTE -->
+<section class="py-20 md:py-28 reveal relative">
+  <div class="absolute left-1/2 -translate-x-1/2 top-0 w-16 h-px" style="background: var(--color-primary);"></div>
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <blockquote class="text-2xl md:text-4xl font-semibold leading-snug italic" style="color: var(--color-text);">
+      "AI can do a lot of the work. But the last mile still requires a human."
+    </blockquote>
+    <p class="mt-6 text-xs font-medium tracking-[0.25em] uppercase" style="color: var(--color-text-secondary);">The thread running through every issue</p>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="py-24 md:py-32 reveal border-t" style="border-color: var(--color-border);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="max-w-xl">
+      <p class="text-xs font-semibold tracking-[0.25em] uppercase mb-5" style="color: var(--color-primary);">Why I Write This</p>
+      <h2 class="text-3xl md:text-4xl font-bold leading-tight mb-8" style="color: var(--color-text);">You don't need a course. You need to see what's possible.</h2>
+
+      <div class="space-y-5 text-base leading-relaxed" style="color: var(--color-text-secondary);">
+        <p>There is a lot of noise around AI right now. Every week brings a new tool, a new model, a new reason to panic or get excited. Most of it is not useful to you.</p>
+        <p>I started this memo because I believe the best way to understand AI is to use it. Not to take a certification. Not to watch a 40-minute YouTube breakdown. <strong class="font-medium" style="color: var(--color-text);">Just sit down, try something, and see what happens.</strong></p>
+        <p>AI tools today are intuitive enough that they don't require formal training. They're like calculators. You don't need a course to use a calculator. You just need to know it exists and what it can do.</p>
+        <p>The people who will do best with AI are the ones who understand both what it can do and where it falls short. This memo is my attempt to help you get there, one week at a time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section class="py-24 md:py-32 reveal border-t" style="border-color: var(--color-border);">
+  <div class="max-w-5xl mx-auto px-6 text-center">
+    <h2 class="text-3xl md:text-5xl font-bold mb-4" style="color: var(--color-text);">Join the memo.</h2>
+    <p class="text-base mb-10 max-w-sm mx-auto" style="color: var(--color-text-secondary);">A clear-eyed take on AI, delivered every week.</p>
+
+    <div class="max-w-md mx-auto">
+      <iframe src="https://davidgoler.substack.com/embed" width="100%" height="150" style="border: none; background: transparent;" frameborder="0" scrolling="no"></iframe>
+    </div>
+    <p class="mt-2 text-sm" style="color: var(--color-text-secondary);">Free. Weekly. No spam.</p>
+  </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t py-8 px-6" style="border-color: var(--color-border);">
+  <div class="max-w-5xl mx-auto flex justify-between items-center text-xs" style="color: var(--color-text-secondary);">
+    <span>&copy; <script>document.write(new Date().getFullYear())</script> Weekly AI Memo</span>
+    <span>Published on <a href="https://substack.com" target="_blank" class="hover:underline" style="color: var(--color-primary);">Substack</a></span>
+  </div>
+</footer>
+
+<script>
+  // Dark mode
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
+
+  function toggleDark() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.documentElement.classList.toggle('dark');
+    document.documentElement.classList.toggle('light');
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('active');
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Hero text animation
+  anime({
+    targets: '.hero-title .word',
+    opacity: [0, 1],
+    translateY: [20, 0],
+    delay: anime.stagger(120, { start: 200 }),
+    easing: 'easeOutExpo',
+    duration: 1200
+  });
+
+  // Feature cards stagger
+  const featureObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        anime({
+          targets: '.feature-card',
+          opacity: [0, 1],
+          translateY: [30, 0],
+          delay: anime.stagger(100, { start: 200 }),
+          easing: 'easeOutCubic',
+          duration: 800
+        });
+        featureObserver.disconnect();
+      }
+    });
+  }, { threshold: 0.2 });
+
+  const featureSection = document.querySelector('.feature-card');
+  if (featureSection) featureObserver.observe(featureSection);
+
+  // Subscribe - scrolls to embed
+  // Substack embed handles subscription directly
+</script>
+
+</body>
+</html>
