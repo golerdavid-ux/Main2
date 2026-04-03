@@ -3,6 +3,96 @@ import Cropper from 'react-easy-crop';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const DEMO_MODE = true; // This branch is the static demo
+
+const DEMO_NOTES = [
+  {
+    id: 1, denomination: '1', seriesYear: '1957', noteType: 'Silver Certificate',
+    serialNumber: 'R47830291A', treasurerSignature: 'Ivy Baker Priest', secretarySignature: 'Robert B. Anderson',
+    friedbergNumber: 'Fr.1619', isStarNote: false, fancySerials: '', errors: [],
+    grade: '64', grader: 'PMG', certNumber: '8012345601', gradingComments: 'Choice Uncirculated',
+    estimatedValue: '45', costPaid: '20', notes: 'Beautiful blue seal', flags: ['Silver Certificate'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-11-10',
+  },
+  {
+    id: 2, denomination: '2', seriesYear: '1953', noteType: 'United States Note',
+    serialNumber: 'A03947182*', treasurerSignature: 'Ivy Baker Priest', secretarySignature: 'George Humphrey',
+    friedbergNumber: 'Fr.1509', isStarNote: true, fancySerials: '', errors: [],
+    grade: '58', grader: 'PMG', certNumber: '8012345602', gradingComments: 'Choice About Unc',
+    estimatedValue: '75', costPaid: '35', notes: 'Star note, red seal', flags: ['Star Note', 'United States Note'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-11-12',
+  },
+  {
+    id: 3, denomination: '5', seriesYear: '1934A', noteType: 'Federal Reserve Note',
+    serialNumber: 'L74620389A', treasurerSignature: 'W.A. Julian', secretarySignature: 'Henry Morgenthau Jr.',
+    friedbergNumber: 'Fr.1957-L', isStarNote: false, fancySerials: '', errors: ['Miscut'],
+    grade: '35', grader: 'PMG', certNumber: '8012345603', gradingComments: 'Choice Very Fine',
+    estimatedValue: '60', costPaid: '30', notes: 'Slight miscut at top', flags: ['Error Note'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-11-15',
+  },
+  {
+    id: 4, denomination: '10', seriesYear: '1929', noteType: 'National Bank Note',
+    serialNumber: 'E000421A', treasurerSignature: 'Walter O. Woods', secretarySignature: 'Andrew Mellon',
+    friedbergNumber: 'Fr.1801-1', isStarNote: false, fancySerials: 'Low Serial',
+    errors: [], grade: '25', grader: 'PMG', certNumber: '8012345604',
+    gradingComments: 'Very Fine', estimatedValue: '350', costPaid: '200',
+    notes: 'First National Bank of Chicago', flags: ['National Bank Note', 'Low Serial'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-11-20',
+  },
+  {
+    id: 5, denomination: '20', seriesYear: '2004A', noteType: 'Federal Reserve Note',
+    serialNumber: 'EB77777764F', treasurerSignature: 'Anna Escobedo Cabral', secretarySignature: 'John W. Snow',
+    friedbergNumber: 'Fr.2091-B', isStarNote: false, fancySerials: 'Near Solid 7s',
+    errors: [], grade: '', grader: 'Ungraded', certNumber: '', gradingComments: '',
+    estimatedValue: '85', costPaid: '40', notes: 'Six 7s in serial', flags: ['Fancy Serial'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-12-01',
+  },
+  {
+    id: 6, denomination: '50', seriesYear: '1928', noteType: 'Gold Certificate',
+    serialNumber: 'A00184726A', treasurerSignature: 'Walter O. Woods', secretarySignature: 'Andrew Mellon',
+    friedbergNumber: 'Fr.2404', isStarNote: false, fancySerials: 'Low Serial',
+    errors: [], grade: '20', grader: 'PCGS', certNumber: '8012345606',
+    gradingComments: 'Very Fine, bright gold color', estimatedValue: '2800', costPaid: '1800',
+    notes: 'Stunning gold seal and serial numbers', flags: ['Gold Certificate', 'Low Serial'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-12-05',
+  },
+  {
+    id: 7, denomination: '100', seriesYear: '2009A', noteType: 'Federal Reserve Note',
+    serialNumber: 'LB00000078*', treasurerSignature: 'Rosa Gumataotao Rios', secretarySignature: 'Timothy Geithner',
+    friedbergNumber: 'Fr.2187-B', isStarNote: true, fancySerials: 'Low Serial',
+    errors: [], grade: '67', grader: 'PMG', certNumber: '8012345607',
+    gradingComments: 'Superb Gem Unc', estimatedValue: '950', costPaid: '500',
+    notes: 'Star note with extremely low serial', flags: ['Star Note', 'Low Serial'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2025-12-10',
+  },
+  {
+    id: 8, denomination: '1', seriesYear: '1862', noteType: 'Legal Tender Note',
+    serialNumber: '28914', treasurerSignature: 'F.E. Spinner', secretarySignature: 'Salmon P. Chase',
+    friedbergNumber: 'Fr.16c', isStarNote: false, fancySerials: '',
+    errors: [], grade: '15', grader: 'PMG', certNumber: '8012345608',
+    gradingComments: 'Choice Fine', estimatedValue: '1200', costPaid: '800',
+    notes: 'Civil War era, beautiful portrait of Chase', flags: ['Legal Tender Note'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2026-01-05',
+  },
+  {
+    id: 9, denomination: '5', seriesYear: '1899', noteType: 'Silver Certificate',
+    serialNumber: 'N41027385', treasurerSignature: 'Ellis H. Roberts', secretarySignature: 'Lyman J. Gage',
+    friedbergNumber: 'Fr.275', isStarNote: false, fancySerials: '',
+    errors: [], grade: '30', grader: 'PMG', certNumber: '8012345609',
+    gradingComments: 'Very Fine, Indian Chief note', estimatedValue: '1500', costPaid: '900',
+    notes: 'The famous "Chief" note — Running Antelope', flags: ['Silver Certificate'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2026-01-15',
+  },
+  {
+    id: 10, denomination: '20', seriesYear: '2017A', noteType: 'Federal Reserve Note',
+    serialNumber: 'MF12345678A', treasurerSignature: 'Jovita Carranza', secretarySignature: 'Steven Mnuchin',
+    friedbergNumber: 'Fr.2097-F', isStarNote: false, fancySerials: 'Ladder',
+    errors: [], grade: '66', grader: 'PMG', certNumber: '8012345610',
+    gradingComments: 'Gem Uncirculated', estimatedValue: '400', costPaid: '200',
+    notes: 'Perfect 1-8 ladder serial', flags: ['Fancy Serial', 'Ladder'],
+    hasPhotoFront: false, hasPhotoBack: false, dateAdded: '2026-02-01',
+  },
+];
 
 const DENOMINATIONS = ['1', '2', '5', '10', '20', '50', '100', '500', '1000', '5000', '10000'];
 
@@ -63,6 +153,10 @@ function App() {
   };
 
   const fetchNotes = useCallback(async () => {
+    if (DEMO_MODE) {
+      setNotes(DEMO_NOTES);
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/notes`);
       const data = await response.json();
@@ -130,6 +224,10 @@ function App() {
   };
 
   const scanPhoto = async (file, side) => {
+    if (DEMO_MODE) {
+      showMessage('This is a demo — AI scanning is disabled.', 'info');
+      return;
+    }
     setScanning(true);
     showMessage(`Scanning the ${side} of your note... hang tight!`, 'info');
     try {
@@ -332,6 +430,10 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (DEMO_MODE) {
+      showMessage('This is a demo — adding notes is disabled.', 'info');
+      return;
+    }
     if (!formData.denomination || !formData.seriesYear) {
       showMessage('Please enter at least the denomination and series year', 'error');
       return;
@@ -386,6 +488,10 @@ function App() {
   };
 
   const handleDelete = async (id) => {
+    if (DEMO_MODE) {
+      showMessage('This is a demo — deleting notes is disabled.', 'info');
+      return;
+    }
     if (!window.confirm('Remove this note from your Money Book?')) return;
     try {
       await fetch(`${API_BASE_URL}/api/notes/${id}`, { method: 'DELETE' });
@@ -410,6 +516,10 @@ function App() {
   const handleBatchPhoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (DEMO_MODE) {
+      showMessage('This is a demo — batch scanning is disabled.', 'info');
+      return;
+    }
     setBatchPhoto(URL.createObjectURL(file));
     setScanning(true);
     setBatchNotes([]);
@@ -451,6 +561,10 @@ function App() {
   const handleBatchBackPhoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (DEMO_MODE) {
+      showMessage('This is a demo — batch scanning is disabled.', 'info');
+      return;
+    }
     setBatchBackPhoto(URL.createObjectURL(file));
     setBatchBackScanning(true);
     showMessage('Scanning backs for additional details...', 'info');
@@ -490,6 +604,10 @@ function App() {
   };
 
   const handleBatchSave = async () => {
+    if (DEMO_MODE) {
+      showMessage('This is a demo — saving is disabled.', 'info');
+      return;
+    }
     const selected = batchNotes.filter(n => n._selected);
     if (selected.length === 0) {
       showMessage('No notes selected to save', 'error');
@@ -556,6 +674,10 @@ function App() {
   };
 
   const handleEditSave = async () => {
+    if (DEMO_MODE) {
+      showMessage('This is a demo — editing is disabled.', 'info');
+      return;
+    }
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/notes/${selectedNote.id}`, {
@@ -1414,6 +1536,12 @@ function App() {
       <div className="container">
         <h1>Money Book</h1>
         <p className="subtitle">U.S. Currency Cataloger</p>
+
+        {DEMO_MODE && (
+          <div className="demo-banner">
+            DEMO MODE — Browse the app with sample data. Scanning, adding, and editing are disabled.
+          </div>
+        )}
 
         {message.text && (
           <div className={`message ${message.type}`}>

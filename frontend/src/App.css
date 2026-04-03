@@ -60,6 +60,19 @@ h1::before {
   padding-left: 46px;
 }
 
+/* ─── Demo Banner ──────────────────────────────── */
+.demo-banner {
+  background: linear-gradient(135deg, #c5a44e, #a8893a);
+  color: #fff;
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.3px;
+}
+
 /* ─── Messages ──────────────────────────────────── */
 .message {
   padding: 12px 16px;
