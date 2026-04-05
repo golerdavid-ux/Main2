@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useFastStore, FAST_TYPES } from '../stores/useFastStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
+import {
+  requestNotificationPermission,
+  useFastNotifications,
+  useScheduleNotifications,
+} from '../hooks/useNotifications'
 import ProgressRing from './ProgressRing'
 
 function formatTime(ms) {
@@ -85,16 +90,32 @@ export default function FastingTimer() {
   const [selectedType, setSelectedType] = useState(preferredFastType)
   const [customHours, setCustomHours] = useState(16)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [notifStatus, setNotifStatus] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  )
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [])
 
+  // Notification hooks
+  useFastNotifications(activeFast, now)
+  useScheduleNotifications(scheduleEnabled, scheduledStartTime, activeFast, now)
+
+  const handleEnableNotifications = useCallback(async () => {
+    const result = await requestNotificationPermission()
+    setNotifStatus(result)
+  }, [])
+
   const handleStart = useCallback(() => {
     setPreferredFastType(selectedType)
     startFast(selectedType, selectedType === 'custom' ? customHours : null)
-  }, [selectedType, customHours, startFast, setPreferredFastType])
+    // Prompt for notifications on first fast start if not yet asked
+    if (notifStatus === 'default') {
+      handleEnableNotifications()
+    }
+  }, [selectedType, customHours, startFast, setPreferredFastType, notifStatus, handleEnableNotifications])
 
   const streak = useMemo(() => {
     const completed = history.filter((f) => f.status === 'completed')
@@ -295,11 +316,38 @@ export default function FastingTimer() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  You'll see a reminder when it's time to start your fast.
+                  You'll get a notification 15 minutes before and when it's time to fast.
                   {scheduledStartTime && ` Eating window ends at ${scheduledStartTime} daily.`}
                 </p>
               </>
             )}
+
+            {/* Notification permission */}
+            <div className="pt-2 border-t border-navy-lighter">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-gray-300">Notifications</span>
+                  <p className="text-xs text-gray-500">Fast ending + schedule reminders</p>
+                </div>
+                {notifStatus === 'granted' ? (
+                  <span className="text-xs font-semibold text-success px-2 py-1 bg-success/10 rounded-lg">On</span>
+                ) : notifStatus === 'denied' ? (
+                  <span className="text-xs text-gray-500 px-2 py-1 bg-navy-lighter rounded-lg">Blocked</span>
+                ) : (
+                  <button
+                    onClick={handleEnableNotifications}
+                    className="text-xs font-semibold text-accent px-3 py-1.5 bg-accent/10 rounded-lg active:bg-accent/20"
+                  >
+                    Enable
+                  </button>
+                )}
+              </div>
+              {notifStatus === 'denied' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Notifications are blocked. Enable them in your browser settings for this site.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>
