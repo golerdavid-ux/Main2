@@ -1,11 +1,12 @@
 {
-  "name": "invoice-generator-frontend",
+  "name": "guildpost-frontend",
   "version": "1.0.0",
-  "description": "Frontend for invoice generator",
+  "description": "Frontend for Guildpost trade school job platform",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
     "react-scripts": "5.0.1"
   },
   "scripts": {
