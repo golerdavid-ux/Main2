@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useFastStore, FAST_TYPES } from '../stores/useFastStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import ProgressRing from './ProgressRing'
@@ -12,12 +12,79 @@ function formatTime(ms) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function getMotivation(progress, elapsed, isComplete) {
+  if (isComplete) {
+    return {
+      message: "You crushed it!",
+      sub: "Your discipline is building something powerful.",
+    }
+  }
+  if (progress < 0.1) {
+    return {
+      message: "You've got this.",
+      sub: "The hardest part is starting — and you already did.",
+    }
+  }
+  if (progress < 0.25) {
+    return {
+      message: "Stay strong.",
+      sub: "Your body is beginning to shift into fat-burning mode.",
+    }
+  }
+  if (progress < 0.5) {
+    return {
+      message: "Keep pushing.",
+      sub: "Autophagy is kicking in. Your cells are cleaning house.",
+    }
+  }
+  if (progress < 0.75) {
+    return {
+      message: "Past the halfway mark!",
+      sub: "You're deeper into ketosis now. Mental clarity incoming.",
+    }
+  }
+  if (progress < 0.9) {
+    return {
+      message: "Almost there.",
+      sub: "The finish line is in sight. You're stronger than the hunger.",
+    }
+  }
+  return {
+    message: "Final stretch!",
+    sub: "Minutes away. Every second counts. Don't quit now.",
+  }
+}
+
+function getNextScheduledTime(scheduledTime, now) {
+  if (!scheduledTime) return null
+  const [h, m] = scheduledTime.split(':').map(Number)
+  const next = new Date(now)
+  next.setHours(h, m, 0, 0)
+  if (next.getTime() <= now) {
+    next.setDate(next.getDate() + 1)
+  }
+  return next.getTime()
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return 'now'
+  const h = Math.floor(ms / 3600000)
+  const m = Math.floor((ms % 3600000) / 60000)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
 export default function FastingTimer() {
-  const { activeFast, startFast, completeFast, cancelFast } = useFastStore()
-  const { preferredFastType, setPreferredFastType } = useSettingsStore()
+  const { activeFast, startFast, completeFast, cancelFast, history } = useFastStore()
+  const {
+    preferredFastType, setPreferredFastType,
+    scheduledStartTime, setScheduledStartTime,
+    scheduleEnabled, setScheduleEnabled,
+  } = useSettingsStore()
   const [now, setNow] = useState(Date.now())
   const [selectedType, setSelectedType] = useState(preferredFastType)
   const [customHours, setCustomHours] = useState(16)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
@@ -29,6 +96,29 @@ export default function FastingTimer() {
     startFast(selectedType, selectedType === 'custom' ? customHours : null)
   }, [selectedType, customHours, startFast, setPreferredFastType])
 
+  const streak = useMemo(() => {
+    const completed = history.filter((f) => f.status === 'completed')
+    const daySet = new Set(completed.map((f) => new Date(f.startTime).toISOString().split('T')[0]))
+    const sortedDays = [...daySet].sort().reverse()
+    const today = new Date(now).toISOString().split('T')[0]
+    const yesterday = new Date(now - 86400000).toISOString().split('T')[0]
+    let count = 0
+    if (sortedDays[0] === today || sortedDays[0] === yesterday) {
+      let checkDate = new Date(sortedDays[0])
+      for (const day of sortedDays) {
+        if (day === checkDate.toISOString().split('T')[0]) {
+          count++
+          checkDate.setDate(checkDate.getDate() - 1)
+        } else break
+      }
+    }
+    return count
+  }, [history, now])
+
+  const nextScheduled = scheduleEnabled ? getNextScheduledTime(scheduledStartTime, now) : null
+  const timeUntilNext = nextScheduled ? nextScheduled - now : null
+
+  // Active fast view
   if (activeFast) {
     const elapsed = now - activeFast.startTime
     const remaining = activeFast.targetDurationMs - elapsed
@@ -37,6 +127,7 @@ export default function FastingTimer() {
     const isFasting = !isComplete
     const color = isComplete ? '#10B981' : '#3B82F6'
     const typeInfo = FAST_TYPES[activeFast.type] || FAST_TYPES['16:8']
+    const motivation = getMotivation(progress, elapsed, isComplete)
 
     return (
       <div className="flex flex-col items-center px-4 pt-8">
@@ -44,11 +135,11 @@ export default function FastingTimer() {
           {activeFast.type === 'custom' ? 'Custom Fast' : typeInfo.label} Fast
         </div>
         <div
-          className={`text-xs font-semibold uppercase tracking-wider mb-6 ${
+          className={`text-xs font-semibold uppercase tracking-wider mb-4 ${
             isComplete ? 'text-success' : 'text-accent'
           }`}
         >
-          {isComplete ? '✓ Fasting Complete — Eating Window' : 'Fasting'}
+          {isComplete ? 'Eating Window' : 'Fasting'}
         </div>
 
         <ProgressRing progress={progress} color={color}>
@@ -69,7 +160,25 @@ export default function FastingTimer() {
           )}
         </ProgressRing>
 
-        <div className="flex gap-3 mt-8 w-full max-w-xs">
+        {/* Motivational message */}
+        <div className="mt-6 text-center max-w-xs">
+          <p className={`text-lg font-semibold ${isComplete ? 'text-success' : 'text-white'}`}>
+            {motivation.message}
+          </p>
+          <p className="text-sm text-gray-400 mt-1 leading-relaxed">
+            {motivation.sub}
+          </p>
+        </div>
+
+        {streak > 1 && (
+          <div className="mt-4 px-4 py-2 bg-accent/10 rounded-full">
+            <span className="text-xs font-semibold text-accent">
+              {streak} day streak — keep it alive!
+            </span>
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-6 w-full max-w-xs">
           <button
             onClick={completeFast}
             className="flex-1 py-3 rounded-xl font-semibold bg-success/20 text-success active:bg-success/30 transition-colors"
@@ -84,17 +193,18 @@ export default function FastingTimer() {
           </button>
         </div>
 
-        <div className="mt-6 text-xs text-gray-500">
+        <div className="mt-4 text-xs text-gray-500">
           Started {new Date(activeFast.startTime).toLocaleString()}
         </div>
       </div>
     )
   }
 
+  // Idle view
   return (
     <div className="flex flex-col items-center px-4 pt-8">
       <h1 className="text-2xl font-bold mb-1">FastTrack</h1>
-      <p className="text-gray-400 text-sm mb-8">Choose your fasting window</p>
+      <p className="text-gray-400 text-sm mb-6">Choose your fasting window</p>
 
       <div className="grid grid-cols-2 gap-3 w-full max-w-xs mb-6">
         {Object.entries(FAST_TYPES).map(([key, val]) => (
@@ -133,10 +243,90 @@ export default function FastingTimer() {
 
       <button
         onClick={handleStart}
-        className="mt-8 w-full max-w-xs py-4 rounded-xl font-bold text-lg bg-accent text-white active:bg-accent/80 transition-colors"
+        className="mt-6 w-full max-w-xs py-4 rounded-xl font-bold text-lg bg-accent text-white active:bg-accent/80 transition-colors"
       >
         Start Fast
       </button>
+
+      {/* Schedule section */}
+      <div className="w-full max-w-xs mt-6">
+        <button
+          onClick={() => setShowSchedule(!showSchedule)}
+          className="flex items-center justify-between w-full px-4 py-3 bg-navy-light rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-400">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span className="text-sm font-medium text-gray-300">Daily Schedule</span>
+          </div>
+          <div className={`text-xs font-semibold ${scheduleEnabled ? 'text-success' : 'text-gray-500'}`}>
+            {scheduleEnabled && scheduledStartTime ? scheduledStartTime : 'Off'}
+          </div>
+        </button>
+
+        {showSchedule && (
+          <div className="mt-2 bg-navy-light rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-300">Enable schedule</label>
+              <button
+                onClick={() => setScheduleEnabled(!scheduleEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors relative ${
+                  scheduleEnabled ? 'bg-accent' : 'bg-navy-lighter'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
+                    scheduleEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            {scheduleEnabled && (
+              <>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Start fasting at</label>
+                  <input
+                    type="time"
+                    value={scheduledStartTime || '20:00'}
+                    onChange={(e) => setScheduledStartTime(e.target.value)}
+                    className="w-full bg-navy-lighter rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  You'll see a reminder when it's time to start your fast.
+                  {scheduledStartTime && ` Eating window ends at ${scheduledStartTime} daily.`}
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Next scheduled fast countdown */}
+      {scheduleEnabled && timeUntilNext !== null && (
+        <div className="w-full max-w-xs mt-3 px-4 py-3 bg-accent/10 rounded-xl text-center">
+          <p className="text-xs text-gray-400">Next fast starts in</p>
+          <p className="text-lg font-bold text-accent">{formatCountdown(timeUntilNext)}</p>
+          <p className="text-xs text-gray-500">
+            {new Date(nextScheduled).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      )}
+
+      {/* Encouragement when idle */}
+      {streak > 0 ? (
+        <div className="mt-4 text-center max-w-xs">
+          <p className="text-sm font-semibold text-accent">{streak} day streak!</p>
+          <p className="text-xs text-gray-400 mt-0.5">Consistency is the key. Keep showing up.</p>
+        </div>
+      ) : (
+        <div className="mt-4 text-center max-w-xs">
+          <p className="text-sm text-gray-400">Every journey starts with a single step.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Start your first fast and build the habit.</p>
+        </div>
+      )}
     </div>
   )
 }
