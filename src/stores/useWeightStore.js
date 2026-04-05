@@ -1,10 +1,31 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { seedWeightData } from '../data/seedWeight'
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+}
+
+const SEED_KEY = 'fasttrack-weight-seeded'
 
 export const useWeightStore = create(
   persist(
     (set, get) => ({
       entries: [],
+
+      _hydrated: false,
+      seedIfEmpty: () => {
+        if (get().entries.length > 0 || localStorage.getItem(SEED_KEY)) return
+        const entries = seedWeightData.map((e) => ({
+          id: generateId() + Math.random().toString(36).slice(2, 4),
+          date: e.date,
+          weightLbs: e.weightLbs,
+          bodyFatPct: e.bodyFatPct || null,
+          notes: null,
+        }))
+        localStorage.setItem(SEED_KEY, '1')
+        set({ entries })
+      },
 
       addEntry: (entry) => {
         const newEntry = {
