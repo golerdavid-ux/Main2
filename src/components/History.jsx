@@ -13,20 +13,21 @@ function getDateKey(ts) {
 
 export default function History() {
   const { history, deleteFast } = useFastStore()
-  const completed = history.filter((f) => f.status === 'completed')
-  // All ended fasts (completed + cancelled) count toward streaks
-  const allEnded = history.filter((f) => f.status === 'completed' || f.status === 'cancelled')
+  // Only fasts that hit the full target count toward streaks and stats
+  const fullFasts = history.filter(
+    (f) => (f.status === 'completed' || f.status === 'cancelled') && (f.endTime - f.startTime) >= f.targetDurationMs
+  )
 
   const stats = useMemo(() => {
-    if (allEnded.length === 0)
-      return { streak: 0, longestStreak: 0, avgDuration: 0, totalHours: 0, completionRate: 0 }
+    if (fullFasts.length === 0)
+      return { streak: 0, longestStreak: 0, avgDuration: 0, totalHours: 0, completionRate: 0, totalFasts: 0 }
 
-    const totalMs = allEnded.reduce((sum, f) => sum + (f.endTime - f.startTime), 0)
-    const avgDuration = totalMs / allEnded.length
+    const totalMs = fullFasts.reduce((sum, f) => sum + (f.endTime - f.startTime), 0)
+    const avgDuration = totalMs / fullFasts.length
     const totalHours = totalMs / 3600000
 
-    // Streak calculation: count consecutive days with any fast (completed or cancelled)
-    const daySet = new Set(allEnded.map((f) => getDateKey(f.startTime)))
+    // Streak calculation: count consecutive days with a full fast
+    const daySet = new Set(fullFasts.map((f) => getDateKey(f.startTime)))
     const sortedDays = [...daySet].sort().reverse()
 
     let streak = 0
@@ -60,12 +61,11 @@ export default function History() {
       longestStreak = Math.max(longestStreak, tempStreak)
     }
 
-    // Completion rate = fasts that hit their full target
-    const fullCompletions = allEnded.filter((f) => (f.endTime - f.startTime) >= f.targetDurationMs)
-    const completionRate = allEnded.length > 0 ? (fullCompletions.length / allEnded.length) * 100 : 0
+    const allEnded = history.filter((f) => f.status === 'completed' || f.status === 'cancelled')
+    const completionRate = allEnded.length > 0 ? (fullFasts.length / allEnded.length) * 100 : 0
 
-    return { streak, longestStreak, avgDuration, totalHours, completionRate, totalFasts: allEnded.length }
-  }, [allEnded])
+    return { streak, longestStreak, avgDuration, totalHours, completionRate, totalFasts: fullFasts.length }
+  }, [fullFasts, history])
 
   return (
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
@@ -81,7 +81,7 @@ export default function History() {
       </div>
 
       {/* Calendar heatmap - last 90 days */}
-      <CalendarHeatmap completed={allEnded} />
+      <CalendarHeatmap completed={fullFasts} />
 
       <h3 className="text-sm font-semibold text-gray-400 mb-3 mt-6">Recent Fasts</h3>
       {history.length === 0 ? (
