@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import { useFastStore, FAST_TYPES } from '../stores/useFastStore'
 import { useWeightStore } from '../stores/useWeightStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
+import { buildCorrelationModel, confidenceLabel } from '../lib/correlationEngine'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, Scatter, ComposedChart, Bar,
+  ReferenceLine, ComposedChart, Bar, ScatterChart, Scatter, ZAxis,
 } from 'recharts'
 
 function formatDuration(ms) {
@@ -20,76 +21,62 @@ export default function Dashboard() {
   const completed = history.filter((f) => f.status === 'completed')
 
   const chartData = useMemo(() => {
-    // Build a map of dates to data
     const dateMap = {}
-
     entries.forEach((e) => {
       if (!dateMap[e.date]) dateMap[e.date] = {}
       dateMap[e.date].weight = e.weightLbs
       dateMap[e.date].bodyFat = e.bodyFatPct
     })
-
     completed.forEach((f) => {
       const date = new Date(f.startTime).toISOString().split('T')[0]
       if (!dateMap[date]) dateMap[date] = {}
-      dateMap[date].fastHours = ((f.endTime - f.startTime) / 3600000)
+      dateMap[date].fastHours = (f.endTime - f.startTime) / 3600000
       dateMap[date].fasted = true
     })
-
     return Object.entries(dateMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, data]) => ({ date, ...data }))
   }, [entries, completed])
 
+  // Correlation engine
+  const model = useMemo(
+    () => buildCorrelationModel(history, entries),
+    [history, entries]
+  )
+
   const recentWeight = entries.length > 0 ? entries[entries.length - 1] : null
   const firstWeight = entries.length > 0 ? entries[0] : null
-  const weightChange = recentWeight && firstWeight
-    ? (recentWeight.weightLbs - firstWeight.weightLbs).toFixed(1)
-    : null
+  const weightChange =
+    recentWeight && firstWeight
+      ? (recentWeight.weightLbs - firstWeight.weightLbs).toFixed(1)
+      : null
 
-  const totalFastingHours = completed.reduce((sum, f) => sum + (f.endTime - f.startTime), 0) / 3600000
-  const avgFastDuration = completed.length > 0
-    ? completed.reduce((sum, f) => sum + (f.endTime - f.startTime), 0) / completed.length
-    : 0
+  const totalFastingHours =
+    completed.reduce((sum, f) => sum + (f.endTime - f.startTime), 0) / 3600000
+  const avgFastDuration =
+    completed.length > 0
+      ? completed.reduce((sum, f) => sum + (f.endTime - f.startTime), 0) / completed.length
+      : 0
+  const avgFastHours = avgFastDuration / 3600000
 
   const last7 = completed.filter((f) => f.startTime > Date.now() - 7 * 86400000)
   const last30 = completed.filter((f) => f.startTime > Date.now() - 30 * 86400000)
 
-  // Estimate days to goal based on recent weight trend
-  const goalEstimate = useMemo(() => {
+  // Goal projection using correlation model
+  const goalProjection = useMemo(() => {
     if (!goalWeight || !recentWeight || recentWeight.weightLbs <= goalWeight) return null
-    const lbsToLose = recentWeight.weightLbs - goalWeight
+    const daysToGoal = model.predictDaysToGoal(recentWeight.weightLbs, goalWeight, avgFastHours || 16)
+    const lbsPerFast = model.predictLoss(avgFastHours || 16)
+    return { daysToGoal, lbsPerFast }
+  }, [goalWeight, recentWeight, model, avgFastHours])
 
-    // Calculate avg weight loss per fasting day from historical data
-    // Use last 30 days of weight data to find the trend
-    const recent30 = entries.filter((e) => {
-      const d = new Date(e.date)
-      return d >= new Date(Date.now() - 30 * 86400000)
-    })
+  const conf = confidenceLabel(model.confidence)
 
-    if (recent30.length < 2) {
-      // Fallback: assume ~0.5 lbs per fasting day (conservative estimate)
-      const daysNeeded = Math.ceil(lbsToLose / 0.5)
-      return { daysNeeded, lbsPerWeek: 3.5, method: 'estimate' }
-    }
-
-    // Linear regression on recent data
-    const first = recent30[0]
-    const last = recent30[recent30.length - 1]
-    const daysBetween = (new Date(last.date) - new Date(first.date)) / 86400000
-    if (daysBetween <= 0) return { daysNeeded: Math.ceil(lbsToLose / 0.5), lbsPerWeek: 3.5, method: 'estimate' }
-
-    const lbsPerDay = (first.weightLbs - last.weightLbs) / daysBetween
-    if (lbsPerDay <= 0) {
-      // Weight is trending up, use conservative estimate
-      return { daysNeeded: Math.ceil(lbsToLose / 0.3), lbsPerWeek: 2.1, method: 'estimate', trending: 'up' }
-    }
-
-    const daysNeeded = Math.ceil(lbsToLose / lbsPerDay)
-    const lbsPerWeek = lbsPerDay * 7
-
-    return { daysNeeded, lbsPerWeek: Math.round(lbsPerWeek * 10) / 10, method: 'trend' }
-  }, [goalWeight, recentWeight, entries])
+  // Scatter data for correlation chart
+  const scatterData = model.pairs.map((p) => ({
+    hours: p.fastHours,
+    lbs: p.weightDelta,
+  }))
 
   return (
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
@@ -103,8 +90,13 @@ export default function Dashboard() {
             {recentWeight ? `${recentWeight.weightLbs} lbs` : '—'}
           </div>
           {weightChange && (
-            <div className={`text-xs font-medium ${parseFloat(weightChange) <= 0 ? 'text-success' : 'text-red-400'}`}>
-              {parseFloat(weightChange) <= 0 ? '' : '+'}{weightChange} lbs total
+            <div
+              className={`text-xs font-medium ${
+                parseFloat(weightChange) <= 0 ? 'text-success' : 'text-red-400'
+              }`}
+            >
+              {parseFloat(weightChange) <= 0 ? '' : '+'}
+              {weightChange} lbs total
             </div>
           )}
         </div>
@@ -130,10 +122,105 @@ export default function Dashboard() {
           <div className="text-xs text-gray-400">This Month</div>
           <div className="text-lg font-bold text-accent">{last30.length} fasts</div>
           <div className="text-xs text-gray-400">
-            Avg {formatDuration(last30.length > 0 ? last30.reduce((s, f) => s + (f.endTime - f.startTime), 0) / last30.length : 0)}
+            Avg{' '}
+            {formatDuration(
+              last30.length > 0
+                ? last30.reduce((s, f) => s + (f.endTime - f.startTime), 0) / last30.length
+                : 0
+            )}
           </div>
         </div>
       </div>
+
+      {/* Correlation Model Card */}
+      <div className="bg-navy-light rounded-2xl p-4 mb-6">
+        <h3 className="text-sm font-semibold text-gray-400 mb-3">
+          Fasting → Weight Loss Model
+        </h3>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Per hour fasted</span>
+            <span className="text-sm font-bold text-accent">
+              {model.lbsPerFastHour > 0
+                ? `−${(model.lbsPerFastHour).toFixed(3)} lbs`
+                : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">
+              Per {avgFastHours ? Math.round(avgFastHours) : 16}h fast
+            </span>
+            <span className="text-sm font-bold text-success">
+              {model.predictLoss(avgFastHours || 16) > 0
+                ? `−${model.predictLoss(avgFastHours || 16).toFixed(2)} lbs`
+                : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Model accuracy (R²)</span>
+            <span className="text-sm font-medium">
+              {model.r2 > 0 ? `${(model.r2 * 100).toFixed(0)}%` : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Data points</span>
+            <span className="text-sm font-medium">{model.dataPoints} paired observations</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Confidence</span>
+            <span className={`text-sm font-semibold ${conf.color}`}>{conf.text}</span>
+          </div>
+
+          {model.dataPoints < 7 && (
+            <p className="text-xs text-gray-500 pt-2 border-t border-navy-lighter">
+              Log more fasts with weight readings before and after to improve accuracy.
+              Need {7 - model.dataPoints} more paired observations.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Scatter: Fast Duration vs Weight Lost */}
+      {scatterData.length >= 3 && (
+        <div className="bg-navy-light rounded-2xl p-4 mb-6">
+          <h3 className="text-sm font-semibold text-gray-400 mb-3">
+            Hours Fasted vs Lbs Lost
+          </h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <ScatterChart margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+              <XAxis
+                dataKey="hours"
+                name="Hours"
+                tick={{ fill: '#6B7280', fontSize: 10 }}
+                label={{ value: 'hours', position: 'bottom', fill: '#6B7280', fontSize: 10, offset: -5 }}
+              />
+              <YAxis
+                dataKey="lbs"
+                name="Lbs Lost"
+                tick={{ fill: '#6B7280', fontSize: 10 }}
+                width={35}
+                label={{ value: 'lbs', angle: -90, position: 'insideLeft', fill: '#6B7280', fontSize: 10 }}
+              />
+              <ZAxis range={[40, 40]} />
+              <Tooltip
+                contentStyle={{ background: '#131A2E', border: 'none', borderRadius: 8, color: '#fff' }}
+                formatter={(val, name) => {
+                  if (name === 'Hours') return [`${val}h`, 'Duration']
+                  return [`${val > 0 ? '−' : '+'}${Math.abs(val).toFixed(2)} lbs`, 'Weight Change']
+                }}
+              />
+              <Scatter data={scatterData} fill="#3B82F6" />
+            </ScatterChart>
+          </ResponsiveContainer>
+          {model.method === 'regression' && (
+            <p className="text-xs text-gray-500 mt-2">
+              Trend: {model.baseLoss > 0 ? `−${model.baseLoss.toFixed(2)}` : model.baseLoss.toFixed(2)} lbs base +{' '}
+              {model.lbsPerFastHour.toFixed(3)} lbs per hour fasted
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Goal weight + projection */}
       <div className="bg-navy-light rounded-2xl p-4 mb-6">
@@ -164,7 +251,11 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">To lose</span>
-              <span className={`text-sm font-bold ${recentWeight.weightLbs <= goalWeight ? 'text-success' : 'text-accent'}`}>
+              <span
+                className={`text-sm font-bold ${
+                  recentWeight.weightLbs <= goalWeight ? 'text-success' : 'text-accent'
+                }`}
+              >
                 {recentWeight.weightLbs <= goalWeight
                   ? 'Goal reached!'
                   : `${(recentWeight.weightLbs - goalWeight).toFixed(1)} lbs`}
@@ -178,53 +269,86 @@ export default function Dashboard() {
                   <div
                     className="h-full bg-accent rounded-full transition-all"
                     style={{
-                      width: `${Math.min(100, Math.max(0, ((firstWeight.weightLbs - recentWeight.weightLbs) / (firstWeight.weightLbs - goalWeight)) * 100))}%`,
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          ((firstWeight.weightLbs - recentWeight.weightLbs) /
+                            (firstWeight.weightLbs - goalWeight)) *
+                            100
+                        )
+                      )}%`,
                     }}
                   />
                 </div>
                 <div className="text-xs text-gray-500 mt-1 text-right">
-                  {Math.round(Math.max(0, ((firstWeight.weightLbs - recentWeight.weightLbs) / (firstWeight.weightLbs - goalWeight)) * 100))}% there
+                  {Math.round(
+                    Math.max(
+                      0,
+                      ((firstWeight.weightLbs - recentWeight.weightLbs) /
+                        (firstWeight.weightLbs - goalWeight)) *
+                        100
+                    )
+                  )}
+                  % there
                 </div>
               </div>
             )}
 
-            {/* Projection */}
-            {goalEstimate && (
+            {/* Model-based projection */}
+            {goalProjection && (
               <div className="mt-2 pt-3 border-t border-navy-lighter">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-400">Est. fasting days to goal</span>
-                  <span className="text-lg font-bold text-accent">{goalEstimate.daysNeeded}</span>
+                  <span className="text-sm text-gray-400">Fasting days to goal</span>
+                  <span className="text-lg font-bold text-accent">
+                    {goalProjection.daysToGoal}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    {goalEstimate.method === 'trend' ? 'Based on your trend' : 'Conservative estimate'}
+                    ~{goalProjection.lbsPerFast.toFixed(2)} lbs per fast
                   </span>
+                  <span className={`text-xs font-semibold ${conf.color}`}>{conf.text}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-gray-500">At 5 fasts/week</span>
                   <span className="text-xs text-gray-400">
-                    ~{goalEstimate.lbsPerWeek} lbs/week
+                    ~{Math.ceil(goalProjection.daysToGoal / 5)} weeks
                   </span>
                 </div>
-                {goalEstimate.trending === 'up' && (
-                  <p className="text-xs text-amber-400 mt-2">
-                    Weight is trending up recently. Consistent fasting will turn this around.
+                <p className="text-xs text-gray-500 mt-2">
+                  Target date (5x/wk): ~
+                  {new Date(
+                    Date.now() + Math.ceil(goalProjection.daysToGoal / 5) * 7 * 86400000
+                  ).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
+                {model.confidence !== 'none' && model.dataPoints >= 3 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Based on {model.dataPoints} observed fast↔weight pairs from your data
                   </p>
                 )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Target date: ~{new Date(Date.now() + goalEstimate.daysNeeded * 86400000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
               </div>
             )}
           </div>
         )}
 
         {!goalWeight && (
-          <p className="text-xs text-gray-500">Set a goal weight to see your projection and estimated timeline.</p>
+          <p className="text-xs text-gray-500">
+            Set a goal weight to see your projection and estimated timeline.
+          </p>
         )}
       </div>
 
       {/* Combined chart */}
       {chartData.length > 1 && (
         <div className="bg-navy-light rounded-2xl p-4 mb-6">
-          <h3 className="text-sm font-semibold text-gray-400 mb-3">Weight + Fasting Correlation</h3>
+          <h3 className="text-sm font-semibold text-gray-400 mb-3">
+            Weight + Fasting Correlation
+          </h3>
           <ResponsiveContainer width="100%" height={220}>
             <ComposedChart data={chartData}>
               <XAxis
@@ -240,7 +364,12 @@ export default function Dashboard() {
               />
               <YAxis yAxisId="fast" orientation="right" hide />
               <Tooltip
-                contentStyle={{ background: '#131A2E', border: 'none', borderRadius: 8, color: '#fff' }}
+                contentStyle={{
+                  background: '#131A2E',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                }}
                 labelStyle={{ color: '#9CA3AF' }}
                 formatter={(val, name) => {
                   if (name === 'weight') return [`${val} lbs`, 'Weight']
@@ -249,7 +378,12 @@ export default function Dashboard() {
                 }}
               />
               {goalWeight && (
-                <ReferenceLine yAxisId="weight" y={goalWeight} stroke="#10B981" strokeDasharray="4 4" />
+                <ReferenceLine
+                  yAxisId="weight"
+                  y={goalWeight}
+                  stroke="#10B981"
+                  strokeDasharray="4 4"
+                />
               )}
               <Line
                 yAxisId="weight"
@@ -257,7 +391,7 @@ export default function Dashboard() {
                 dataKey="weight"
                 stroke="#3B82F6"
                 strokeWidth={2}
-                dot={{ fill: '#3B82F6', r: 3 }}
+                dot={false}
                 connectNulls
               />
               <Bar
