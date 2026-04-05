@@ -9,6 +9,7 @@ yarn-error.log*
 .env.local
 
 # Build outputs
+dist/
 backend/dist/
 frontend/build/
 frontend/dist/
