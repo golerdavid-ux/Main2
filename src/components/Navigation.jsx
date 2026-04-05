@@ -38,7 +38,7 @@ const labels = {
 
 export default function Navigation({ tab, setTab, tabs }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-navy-light border-t border-navy-lighter safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-navy-light border-t border-navy-lighter" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         {tabs.map((t) => (
           <button
