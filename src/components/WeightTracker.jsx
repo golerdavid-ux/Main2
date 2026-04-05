@@ -63,23 +63,28 @@ export default function WeightTracker() {
                 tickFormatter={(d) => d.slice(5)}
               />
               <YAxis
+                yAxisId="left"
                 domain={['dataMin - 2', 'dataMax + 2']}
                 tick={{ fill: '#6B7280', fontSize: 10 }}
                 width={40}
               />
+              {chartData.some((d) => d.bodyFat) && (
+                <YAxis yAxisId="right" orientation="right" domain={['dataMin - 1', 'dataMax + 1']} hide />
+              )}
               <Tooltip
                 contentStyle={{ background: '#131A2E', border: 'none', borderRadius: 8, color: '#fff' }}
                 labelStyle={{ color: '#9CA3AF' }}
               />
               {goalWeight && (
-                <ReferenceLine y={goalWeight} stroke="#10B981" strokeDasharray="4 4" label="" />
+                <ReferenceLine yAxisId="left" y={goalWeight} stroke="#10B981" strokeDasharray="4 4" label="" />
               )}
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="weight"
                 stroke="#3B82F6"
                 strokeWidth={2}
-                dot={{ fill: '#3B82F6', r: 3 }}
+                dot={false}
                 name="Weight (lbs)"
               />
               {chartData.some((d) => d.bodyFat) && (
@@ -88,7 +93,8 @@ export default function WeightTracker() {
                   dataKey="bodyFat"
                   stroke="#10B981"
                   strokeWidth={2}
-                  dot={{ fill: '#10B981', r: 3 }}
+                  dot={false}
+                  connectNulls
                   name="Body Fat %"
                   yAxisId="right"
                 />
