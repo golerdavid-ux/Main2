@@ -1,7 +1,16 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useWeightStore } from '../stores/useWeightStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+
+const RANGES = [
+  { key: '1W', label: '1W', days: 7 },
+  { key: '1M', label: '1M', days: 30 },
+  { key: '3M', label: '3M', days: 90 },
+  { key: '6M', label: '6M', days: 180 },
+  { key: '1Y', label: '1Y', days: 365 },
+  { key: 'ALL', label: 'All', days: Infinity },
+]
 
 export default function WeightTracker() {
   const { entries, addEntry, deleteEntry, importEntries } = useWeightStore()
@@ -13,6 +22,7 @@ export default function WeightTracker() {
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
+  const [range, setRange] = useState('3M')
   const fileRef = useRef()
 
   const handleSubmit = (e) => {
@@ -43,64 +53,119 @@ export default function WeightTracker() {
     reader.readAsText(file)
   }
 
-  const chartData = entries.map((e) => ({
-    date: e.date,
-    weight: e.weightLbs,
-    bodyFat: e.bodyFatPct,
-  }))
+  const rangeDays = RANGES.find((r) => r.key === range)?.days ?? Infinity
+  const cutoffDate = rangeDays === Infinity
+    ? null
+    : new Date(Date.now() - rangeDays * 86400000).toISOString().split('T')[0]
+
+  const chartData = useMemo(() => {
+    const filtered = cutoffDate
+      ? entries.filter((e) => e.date >= cutoffDate)
+      : entries
+    return filtered.map((e) => ({
+      date: e.date,
+      weight: e.weightLbs,
+      bodyFat: e.bodyFatPct,
+    }))
+  }, [entries, cutoffDate])
+
+  // Summary for selected range
+  const rangeSummary = useMemo(() => {
+    if (chartData.length < 2) return null
+    const first = chartData[0]
+    const last = chartData[chartData.length - 1]
+    const change = last.weight - first.weight
+    const high = Math.max(...chartData.map((d) => d.weight))
+    const low = Math.min(...chartData.map((d) => d.weight))
+    return { change, high, low }
+  }, [chartData])
 
   return (
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
       <h2 className="text-xl font-bold mb-4">Weight Tracker</h2>
 
-      {chartData.length > 1 && (
+      {entries.length > 1 && (
         <div className="bg-navy-light rounded-2xl p-4 mb-6">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="date"
-                tick={{ fill: '#6B7280', fontSize: 10 }}
-                tickFormatter={(d) => d.slice(5)}
-              />
-              <YAxis
-                yAxisId="left"
-                domain={['dataMin - 2', 'dataMax + 2']}
-                tick={{ fill: '#6B7280', fontSize: 10 }}
-                width={40}
-              />
-              {chartData.some((d) => d.bodyFat) && (
-                <YAxis yAxisId="right" orientation="right" domain={['dataMin - 1', 'dataMax + 1']} hide />
-              )}
-              <Tooltip
-                contentStyle={{ background: '#131A2E', border: 'none', borderRadius: 8, color: '#fff' }}
-                labelStyle={{ color: '#9CA3AF' }}
-              />
-              {goalWeight && (
-                <ReferenceLine yAxisId="left" y={goalWeight} stroke="#10B981" strokeDasharray="4 4" label="" />
-              )}
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="weight"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                dot={false}
-                name="Weight (lbs)"
-              />
-              {chartData.some((d) => d.bodyFat) && (
-                <Line
-                  type="monotone"
-                  dataKey="bodyFat"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls
-                  name="Body Fat %"
-                  yAxisId="right"
+          {/* Range toggle */}
+          <div className="flex gap-1 mb-3">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setRange(r.key)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  range === r.key
+                    ? 'bg-accent text-white'
+                    : 'bg-navy-lighter text-gray-400 active:bg-navy'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Range summary */}
+          {rangeSummary && (
+            <div className="flex justify-between mb-3 text-xs">
+              <span className={rangeSummary.change <= 0 ? 'text-success font-semibold' : 'text-red-400 font-semibold'}>
+                {rangeSummary.change <= 0 ? '' : '+'}{rangeSummary.change.toFixed(1)} lbs
+              </span>
+              <span className="text-gray-500">
+                H: {rangeSummary.high} · L: {rangeSummary.low}
+              </span>
+            </div>
+          )}
+
+          {chartData.length > 1 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartData}>
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#6B7280', fontSize: 10 }}
+                  tickFormatter={(d) => d.slice(5)}
                 />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis
+                  yAxisId="left"
+                  domain={['dataMin - 2', 'dataMax + 2']}
+                  tick={{ fill: '#6B7280', fontSize: 10 }}
+                  width={40}
+                />
+                {chartData.some((d) => d.bodyFat) && (
+                  <YAxis yAxisId="right" orientation="right" domain={['dataMin - 1', 'dataMax + 1']} hide />
+                )}
+                <Tooltip
+                  contentStyle={{ background: '#131A2E', border: 'none', borderRadius: 8, color: '#fff' }}
+                  labelStyle={{ color: '#9CA3AF' }}
+                />
+                {goalWeight && (
+                  <ReferenceLine yAxisId="left" y={goalWeight} stroke="#10B981" strokeDasharray="4 4" label="" />
+                )}
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="weight"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  dot={chartData.length <= 60}
+                  name="Weight (lbs)"
+                />
+                {chartData.some((d) => d.bodyFat) && (
+                  <Line
+                    type="monotone"
+                    dataKey="bodyFat"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                    name="Body Fat %"
+                    yAxisId="right"
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-xs text-gray-500 text-center py-8">No data in this range</p>
+          )}
+
           <div className="flex items-center gap-3 mt-2">
             <label className="text-xs text-gray-400">Goal:</label>
             <input
