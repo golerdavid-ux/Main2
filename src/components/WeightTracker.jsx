@@ -80,9 +80,29 @@ export default function WeightTracker() {
     return { change, high, low }
   }, [chartData])
 
+  const daysSinceLastEntry = useMemo(() => {
+    if (entries.length === 0) return null
+    const last = entries[entries.length - 1]
+    return Math.floor((Date.now() - new Date(last.date).getTime()) / 86400000)
+  }, [entries])
+
   return (
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
       <h2 className="text-xl font-bold mb-4">Weight Tracker</h2>
+
+      {daysSinceLastEntry !== null && daysSinceLastEntry >= 2 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
+          <span className="text-lg mt-0.5">⚖️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-400">
+              {daysSinceLastEntry} days since last weigh-in
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Consistent tracking makes your projections more accurate. Hop on the scale!
+            </p>
+          </div>
+        </div>
+      )}
 
       {entries.length > 1 && (
         <div className="bg-navy-light rounded-2xl p-4 mb-6">

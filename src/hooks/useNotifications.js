@@ -86,8 +86,37 @@ export function useFastNotifications(activeFast, now) {
 }
 
 /**
- * Hook: fires a notification when it's time to start fasting (schedule).
+ * Hook: reminds user to log weight if no entry in the last 2 days.
+ * Checks once per app open (not every second).
  */
+export function useWeightReminder(weightEntries) {
+  const checkedRef = useRef(false)
+
+  useEffect(() => {
+    if (checkedRef.current) return
+    checkedRef.current = true
+
+    if (!weightEntries || weightEntries.length === 0) return
+    if (Notification.permission !== 'granted') return
+
+    const lastEntry = weightEntries[weightEntries.length - 1]
+    const lastDate = new Date(lastEntry.date)
+    const daysSince = Math.floor((Date.now() - lastDate.getTime()) / 86400000)
+
+    if (daysSince >= 2) {
+      // Don't spam — only remind once per day
+      const reminderKey = `fasttrack-weight-reminder-${new Date().toISOString().split('T')[0]}`
+      if (localStorage.getItem(reminderKey)) return
+      localStorage.setItem(reminderKey, '1')
+
+      sendNotification(
+        'Log your weight!',
+        `It's been ${daysSince} days since your last weigh-in. Hop on the scale to keep your data accurate.`,
+        'weight-reminder'
+      )
+    }
+  }, [weightEntries])
+}
 export function useScheduleNotifications(scheduleEnabled, scheduledStartTime, activeFast, now) {
   const sentRef = useRef(new Set())
 
