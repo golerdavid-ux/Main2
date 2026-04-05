@@ -118,8 +118,8 @@ export default function FastingTimer() {
   }, [selectedType, customHours, startFast, setPreferredFastType, notifStatus, handleEnableNotifications])
 
   const streak = useMemo(() => {
-    const completed = history.filter((f) => f.status === 'completed')
-    const daySet = new Set(completed.map((f) => new Date(f.startTime).toISOString().split('T')[0]))
+    const allEnded = history.filter((f) => f.status === 'completed' || f.status === 'cancelled')
+    const daySet = new Set(allEnded.map((f) => new Date(f.startTime).toISOString().split('T')[0]))
     const sortedDays = [...daySet].sort().reverse()
     const today = new Date(now).toISOString().split('T')[0]
     const yesterday = new Date(now - 86400000).toISOString().split('T')[0]

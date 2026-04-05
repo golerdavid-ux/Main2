@@ -14,17 +14,19 @@ function getDateKey(ts) {
 export default function History() {
   const { history, deleteFast } = useFastStore()
   const completed = history.filter((f) => f.status === 'completed')
+  // All ended fasts (completed + cancelled) count toward streaks
+  const allEnded = history.filter((f) => f.status === 'completed' || f.status === 'cancelled')
 
   const stats = useMemo(() => {
-    if (completed.length === 0)
+    if (allEnded.length === 0)
       return { streak: 0, longestStreak: 0, avgDuration: 0, totalHours: 0, completionRate: 0 }
 
-    const totalMs = completed.reduce((sum, f) => sum + (f.endTime - f.startTime), 0)
-    const avgDuration = totalMs / completed.length
+    const totalMs = allEnded.reduce((sum, f) => sum + (f.endTime - f.startTime), 0)
+    const avgDuration = totalMs / allEnded.length
     const totalHours = totalMs / 3600000
 
-    // Streak calculation: count consecutive days with a completed fast
-    const daySet = new Set(completed.map((f) => getDateKey(f.startTime)))
+    // Streak calculation: count consecutive days with any fast (completed or cancelled)
+    const daySet = new Set(allEnded.map((f) => getDateKey(f.startTime)))
     const sortedDays = [...daySet].sort().reverse()
 
     let streak = 0
@@ -58,10 +60,12 @@ export default function History() {
       longestStreak = Math.max(longestStreak, tempStreak)
     }
 
-    const completionRate = history.length > 0 ? (completed.length / history.length) * 100 : 0
+    // Completion rate = fasts that hit their full target
+    const fullCompletions = allEnded.filter((f) => (f.endTime - f.startTime) >= f.targetDurationMs)
+    const completionRate = allEnded.length > 0 ? (fullCompletions.length / allEnded.length) * 100 : 0
 
-    return { streak, longestStreak, avgDuration, totalHours, completionRate }
-  }, [completed, history.length])
+    return { streak, longestStreak, avgDuration, totalHours, completionRate, totalFasts: allEnded.length }
+  }, [allEnded])
 
   return (
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
@@ -72,12 +76,12 @@ export default function History() {
         <StatCard label="Longest Streak" value={`${stats.longestStreak} day${stats.longestStreak !== 1 ? 's' : ''}`} color="text-accent" />
         <StatCard label="Avg Duration" value={formatDuration(stats.avgDuration)} color="text-success" />
         <StatCard label="Total Hours" value={`${stats.totalHours.toFixed(1)}h`} color="text-success" />
-        <StatCard label="Completed" value={completed.length.toString()} color="text-white" />
-        <StatCard label="Completion Rate" value={`${stats.completionRate.toFixed(0)}%`} color="text-white" />
+        <StatCard label="Total Fasts" value={stats.totalFasts?.toString() || '0'} color="text-white" />
+        <StatCard label="Full Target Hit" value={`${stats.completionRate.toFixed(0)}%`} color="text-white" />
       </div>
 
       {/* Calendar heatmap - last 90 days */}
-      <CalendarHeatmap completed={completed} />
+      <CalendarHeatmap completed={allEnded} />
 
       <h3 className="text-sm font-semibold text-gray-400 mb-3 mt-6">Recent Fasts</h3>
       {history.length === 0 ? (
