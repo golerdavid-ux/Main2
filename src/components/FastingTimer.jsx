@@ -193,6 +193,9 @@ export default function FastingTimer() {
           </p>
         </div>
 
+        {/* Allowed during fast */}
+        {isFasting && <FastingAllowed />}
+
         {streak > 1 && (
           <div className="mt-4 px-4 py-2 bg-accent/10 rounded-full">
             <span className="text-xs font-semibold text-accent">
@@ -365,6 +368,9 @@ export default function FastingTimer() {
         </div>
       )}
 
+      {/* Allowed during fast — also show on idle as reference */}
+      <FastingAllowed />
+
       {/* Encouragement when idle */}
       {streak > 0 ? (
         <div className="mt-4 text-center max-w-xs">
@@ -375,6 +381,80 @@ export default function FastingTimer() {
         <div className="mt-4 text-center max-w-xs">
           <p className="text-sm text-gray-400">Every journey starts with a single step.</p>
           <p className="text-xs text-gray-500 mt-0.5">Start your first fast and build the habit.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ALLOWED = [
+  { icon: '💧', name: 'Water', note: 'Still or sparkling' },
+  { icon: '☕', name: 'Black Coffee', note: 'No sugar, cream, or milk' },
+  { icon: '🍵', name: 'Plain Tea', note: 'Green, black, herbal — no sweeteners' },
+  { icon: '🧂', name: 'Electrolytes', note: 'Salt, potassium, magnesium' },
+  { icon: '💊', name: 'Supplements', note: 'Most are fine — check labels' },
+]
+
+const AVOID = [
+  { icon: '🥛', name: 'Milk / Cream' },
+  { icon: '🍬', name: 'Sugar / Sweeteners' },
+  { icon: '🧃', name: 'Juice / Soda' },
+  { icon: '🍎', name: 'Any calories' },
+]
+
+function FastingAllowed() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="w-full max-w-xs mt-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full px-4 py-3 bg-navy-light rounded-xl"
+      >
+        <span className="text-sm font-medium text-gray-300">What's OK during your fast</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="mt-2 bg-navy-light rounded-xl p-4 space-y-4">
+          <div>
+            <div className="text-xs font-semibold text-success uppercase tracking-wider mb-2">OK to have</div>
+            <div className="space-y-2">
+              {ALLOWED.map((item) => (
+                <div key={item.name} className="flex items-center gap-3">
+                  <span className="text-lg">{item.icon}</span>
+                  <div>
+                    <div className="text-sm text-white">{item.name}</div>
+                    <div className="text-xs text-gray-500">{item.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-navy-lighter">
+            <div className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">Avoid</div>
+            <div className="space-y-2">
+              {AVOID.map((item) => (
+                <div key={item.name} className="flex items-center gap-3">
+                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-sm text-gray-400">{item.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-600 pt-2 border-t border-navy-lighter">
+            Rule of thumb: anything under ~5 calories won't break your fast.
+          </p>
         </div>
       )}
     </div>
