@@ -176,6 +176,9 @@ export default function FastingTimer() {
                 {formatTime(remaining)}
               </div>
               <div className="text-xs text-gray-500">remaining</div>
+              <div className="text-xs text-gray-400 mt-1">
+                Ends at {new Date(activeFast.startTime + activeFast.targetDurationMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              </div>
             </>
           )}
           {isComplete && (
