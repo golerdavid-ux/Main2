@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: book-platform
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - book-data:/app/data
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+
+  nginx:
+    image: nginx:alpine
+    container_name: book-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/book.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - app
+
+volumes:
+  book-data:
+    driver: local

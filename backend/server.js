@@ -222,9 +222,13 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API is running' });
 });
 
-// Serve frontend in production
-const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
-if (fs.existsSync(frontendBuild)) {
+// Serve frontend in production (supports both local build and Docker paths)
+const frontendPaths = [
+  path.join(__dirname, '..', 'frontend', 'build'),  // local dev build
+  path.join(__dirname, 'public'),                    // Docker build
+];
+const frontendBuild = frontendPaths.find(p => fs.existsSync(p));
+if (frontendBuild) {
   app.use(express.static(frontendBuild));
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuild, 'index.html'));
