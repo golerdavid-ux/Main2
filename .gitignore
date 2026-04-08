@@ -25,3 +25,6 @@ Thumbs.db
 
 # Generated files
 *.pdf
+
+# Book platform data (user content)
+backend/data/

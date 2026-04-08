@@ -6,13 +6,14 @@ require('dotenv').config();
 
 const { generateInvoicePDF } = require('./services/pdfGenerator');
 const { sendInvoiceEmail } = require('./services/emailService');
+const booksRouter = require('./routes/books');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Create temp directory for PDFs if it doesn't exist
 const tempDir = path.join(__dirname, 'temp');
@@ -211,15 +212,27 @@ app.post('/api/invoice/preview', async (req, res) => {
   }
 });
 
+// Book Publishing Platform routes
+app.use('/api/books', booksRouter);
+
 /**
  * Health check endpoint
  */
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Invoice Generator API is running' });
+  res.json({ status: 'ok', message: 'API is running' });
 });
+
+// Serve frontend in production
+const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
+if (fs.existsSync(frontendBuild)) {
+  app.use(express.static(frontendBuild));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuild, 'index.html'));
+  });
+}
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Invoice Generator API running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   console.log(`Products loaded: ${productsData.products.length}`);
 });
