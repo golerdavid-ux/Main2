@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const mammoth = require('mammoth');
 const {
   generateId,
   readBooks,
@@ -8,6 +10,8 @@ const {
   writeChapters,
   deleteChaptersFile,
 } = require('../db');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // GET /api/books - List all books with stats
 router.get('/', (req, res) => {
@@ -206,6 +210,112 @@ router.put('/:id/reorder', (req, res) => {
   });
   writeChapters(req.params.id, chapters);
   res.json({ success: true });
+});
+
+// POST /api/books/import - Import a .docx file as a new book
+router.post('/import', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    if (ext !== 'docx') {
+      return res.status(400).json({ error: 'Only .docx files are supported' });
+    }
+
+    // Parse .docx to HTML
+    const result = await mammoth.convertToHtml({ buffer: req.file.buffer });
+    const html = result.value;
+
+    // Extract title from filename (strip extension)
+    const fileName = req.file.originalname.replace(/\.docx$/i, '');
+    const title = req.body.title || fileName;
+    const author = req.body.author || '';
+
+    // Split into chapters by <h1> or <h2> tags
+    const chapterSplitRegex = /<h[12][^>]*>(.*?)<\/h[12]>/gi;
+    const headings = [];
+    let match;
+    while ((match = chapterSplitRegex.exec(html)) !== null) {
+      headings.push({ index: match.index, title: match[1].replace(/<[^>]*>/g, '').trim(), fullMatch: match[0] });
+    }
+
+    let chapters = [];
+    if (headings.length > 0) {
+      // Split content at each heading
+      headings.forEach((heading, i) => {
+        const start = heading.index + heading.fullMatch.length;
+        const end = i + 1 < headings.length ? headings[i + 1].index : html.length;
+        const content = html.substring(start, end).trim();
+        const text = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        const wordCount = text ? text.split(' ').length : 0;
+
+        chapters.push({
+          id: generateId(),
+          title: heading.title || `Chapter ${i + 1}`,
+          content,
+          sortOrder: i,
+          wordCount,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      // If there's content before the first heading, prepend it as "Preface"
+      const beforeFirst = html.substring(0, headings[0].index).trim();
+      if (beforeFirst && beforeFirst.replace(/<[^>]*>/g, '').trim().length > 0) {
+        const text = beforeFirst.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        chapters.unshift({
+          id: generateId(),
+          title: 'Preface',
+          content: beforeFirst,
+          sortOrder: 0,
+          wordCount: text ? text.split(' ').length : 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        // Re-number sort orders
+        chapters.forEach((ch, i) => { ch.sortOrder = i; });
+      }
+    } else {
+      // No headings found — put everything in one chapter
+      const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      chapters = [{
+        id: generateId(),
+        title: 'Chapter 1',
+        content: html,
+        sortOrder: 0,
+        wordCount: text ? text.split(' ').length : 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }];
+    }
+
+    // Create the book
+    const books = readBooks();
+    const newBook = {
+      id: generateId(),
+      title,
+      author,
+      description: '',
+      coverColor: '#1a1a2e',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    books.push(newBook);
+    writeBooks(books);
+    writeChapters(newBook.id, chapters);
+
+    res.status(201).json({
+      ...newBook,
+      chapterCount: chapters.length,
+      wordCount: chapters.reduce((sum, ch) => sum + ch.wordCount, 0),
+    });
+  } catch (err) {
+    console.error('Import error:', err);
+    res.status(500).json({ error: 'Failed to import file: ' + err.message });
+  }
 });
 
 // GET /api/books/:id/export - Export book as PDF

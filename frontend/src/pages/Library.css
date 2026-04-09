@@ -24,6 +24,34 @@
   font-size: 0.95rem;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-import {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-import:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-import:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-new-book {
   padding: 12px 24px;
   background: #667eea;

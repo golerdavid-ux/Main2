@@ -15,6 +15,8 @@ export default function Library() {
   const [showModal, setShowModal] = useState(false);
   const [newBook, setNewBook] = useState({ title: '', author: '', description: '', coverColor: '#1a1a2e' });
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,6 +64,32 @@ export default function Library() {
     }
   };
 
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API}/api/books/import`, {
+        method: 'POST',
+        body: formData,
+      });
+      const book = await res.json();
+      if (res.ok) {
+        navigate(`/book/${book.id}`);
+      } else {
+        alert(book.error || 'Failed to import file');
+      }
+    } catch (err) {
+      console.error('Import failed:', err);
+      alert('Failed to import file');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const formatDate = (iso) => {
     return new Date(iso).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric'
@@ -75,9 +103,25 @@ export default function Library() {
           <h1>My Library</h1>
           <p className="library-subtitle">Your book publishing platform</p>
         </div>
-        <button className="btn-new-book" onClick={() => setShowModal(true)}>
-          + New Book
-        </button>
+        <div className="header-buttons">
+          <button
+            className="btn-import"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? 'Importing...' : 'Import .docx'}
+          </button>
+          <button className="btn-new-book" onClick={() => setShowModal(true)}>
+            + New Book
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".docx"
+            onChange={handleImport}
+            style={{ display: 'none' }}
+          />
+        </div>
       </header>
 
       <div className="books-grid">
