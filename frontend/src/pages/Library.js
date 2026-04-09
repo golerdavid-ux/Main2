@@ -117,7 +117,7 @@ export default function Library() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".docx"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={handleImport}
             style={{ display: 'none' }}
           />
