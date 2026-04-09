@@ -69,6 +69,23 @@
   transform: translateY(-1px);
 }
 
+.btn-first-book {
+  padding: 14px 28px;
+  background: #2ecc71;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-first-book:hover {
+  background: #27ae60;
+  transform: translateY(-1px);
+}
+
 .books-grid {
   padding: 40px 48px;
   display: grid;

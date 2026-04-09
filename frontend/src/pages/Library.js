@@ -139,7 +139,7 @@ export default function Library() {
             </div>
             <h2>No books yet</h2>
             <p>Create your first book to get started writing</p>
-            <button className="btn-new-book" onClick={() => setShowModal(true)}>
+            <button className="btn-first-book" onClick={() => setShowModal(true)}>
               + Create Your First Book
             </button>
           </div>
