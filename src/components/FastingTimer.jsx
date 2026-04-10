@@ -6,6 +6,7 @@ import {
   useFastNotifications,
   useScheduleNotifications,
 } from '../hooks/useNotifications'
+import { getRoast } from '../lib/roasts'
 import ProgressRing from './ProgressRing'
 
 function formatTime(ms) {
@@ -93,6 +94,7 @@ export default function FastingTimer() {
   const [notifStatus, setNotifStatus] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   )
+  const [roast, setRoast] = useState(null)
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
@@ -116,6 +118,21 @@ export default function FastingTimer() {
       handleEnableNotifications()
     }
   }, [selectedType, customHours, startFast, setPreferredFastType, notifStatus, handleEnableNotifications])
+
+  // End a fast — if target wasn't hit, show a roast before committing.
+  const handleEndFast = useCallback(
+    (action) => {
+      if (!activeFast) return
+      const elapsed = Date.now() - activeFast.startTime
+      const target = activeFast.targetDurationMs
+      if (elapsed < target) {
+        setRoast(getRoast(elapsed, target))
+      }
+      if (action === 'complete') completeFast()
+      else cancelFast()
+    },
+    [activeFast, completeFast, cancelFast]
+  )
 
   const streak = useMemo(() => {
     const fullFasts = history.filter(
@@ -209,13 +226,13 @@ export default function FastingTimer() {
 
         <div className="flex gap-3 mt-6 w-full max-w-xs">
           <button
-            onClick={completeFast}
+            onClick={() => handleEndFast('complete')}
             className="flex-1 py-3 rounded-xl font-semibold bg-success/20 text-success active:bg-success/30 transition-colors"
           >
             End Fast
           </button>
           <button
-            onClick={cancelFast}
+            onClick={() => handleEndFast('cancel')}
             className="flex-1 py-3 rounded-xl font-semibold bg-red-500/20 text-red-400 active:bg-red-500/30 transition-colors"
           >
             Cancel
@@ -225,6 +242,8 @@ export default function FastingTimer() {
         <div className="mt-4 text-xs text-gray-500">
           Started {new Date(activeFast.startTime).toLocaleString()}
         </div>
+
+        {roast && <RoastModal roast={roast} onClose={() => setRoast(null)} />}
       </div>
     )
   }
@@ -386,6 +405,43 @@ export default function FastingTimer() {
           <p className="text-xs text-gray-500 mt-0.5">Start your first fast and build the habit.</p>
         </div>
       )}
+
+      {roast && <RoastModal roast={roast} onClose={() => setRoast(null)} />}
+    </div>
+  )
+}
+
+function RoastModal({ roast, onClose }) {
+  const pct = Math.round(roast.completedPct * 100)
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm bg-navy-light rounded-3xl p-6 border border-red-500/30 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center">
+          <div className="text-4xl mb-2">🔥</div>
+          <h3 className="text-xl font-bold text-red-400 mb-2">{roast.title}</h3>
+          <p className="text-sm text-gray-200 leading-relaxed mb-4">{roast.message}</p>
+          <div className="bg-navy-lighter rounded-xl px-4 py-3 mb-5">
+            <div className="text-xs text-gray-500 uppercase tracking-wider">You made it</div>
+            <div className="text-2xl font-bold text-white">
+              {roast.completedHours.toFixed(1)}h
+              <span className="text-gray-500 text-base font-normal"> / {roast.targetHours.toFixed(0)}h</span>
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">({pct}% of goal)</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl font-semibold bg-accent text-white active:bg-accent/80 transition-colors"
+          >
+            I'll do better next time
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

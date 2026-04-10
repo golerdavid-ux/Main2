@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react'
 import { useWeightStore } from '../stores/useWeightStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { WEIGHT_GAIN_REASONS, getReasonLabel } from '../lib/weightReasons'
 
 const RANGES = [
   { key: '1W', label: '1W', days: 7 },
@@ -23,15 +24,55 @@ export default function WeightTracker() {
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
   const [range, setRange] = useState('3M')
+  const [pendingEntry, setPendingEntry] = useState(null) // entry awaiting reason confirmation
   const fileRef = useRef()
+
+  // Previous weight on-or-before a given date — used to detect gains.
+  const getPreviousWeight = (targetDate) => {
+    const prior = entries
+      .filter((e) => e.date <= targetDate)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+    return prior.length > 0 ? prior[prior.length - 1] : null
+  }
+
+  const commitEntry = (entry) => {
+    addEntry(entry)
+    setWeight('')
+    setBodyFat('')
+    setNotes('')
+    setPendingEntry(null)
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!weight) return
-    addEntry({ date, weightLbs: weight, bodyFatPct: bodyFat || null, notes: notes || null })
-    setWeight('')
-    setBodyFat('')
-    setNotes('')
+    const newWeight = parseFloat(weight)
+    const prev = getPreviousWeight(date)
+    const entry = {
+      date,
+      weightLbs: weight,
+      bodyFatPct: bodyFat || null,
+      notes: notes || null,
+      reason: null,
+    }
+    // If this is a weight gain vs. the most recent prior entry, prompt for a reason.
+    if (prev && newWeight > prev.weightLbs) {
+      setPendingEntry({ ...entry, prevWeight: prev.weightLbs, delta: newWeight - prev.weightLbs })
+    } else {
+      commitEntry(entry)
+    }
+  }
+
+  const handleReasonSelect = (reasonKey) => {
+    if (!pendingEntry) return
+    const { prevWeight, delta, ...entry } = pendingEntry
+    commitEntry({ ...entry, reason: reasonKey })
+  }
+
+  const handleSkipReason = () => {
+    if (!pendingEntry) return
+    const { prevWeight, delta, ...entry } = pendingEntry
+    commitEntry(entry)
   }
 
   const handleImportText = () => {
@@ -299,26 +340,88 @@ export default function WeightTracker() {
       {entries.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-400">Recent Entries</h3>
-          {[...entries].reverse().slice(0, 20).map((e) => (
-            <div key={e.id} className="flex items-center justify-between bg-navy-light rounded-xl px-4 py-3">
-              <div>
-                <div className="text-sm font-medium">{e.weightLbs} lbs</div>
-                <div className="text-xs text-gray-400">
-                  {e.date}
-                  {e.bodyFatPct && ` · ${e.bodyFatPct}% BF`}
-                  {e.notes && ` · ${e.notes}`}
+          {[...entries].reverse().slice(0, 20).map((e) => {
+            const reasonLabel = e.reason ? getReasonLabel(e.reason) : null
+            return (
+              <div key={e.id} className="flex items-center justify-between bg-navy-light rounded-xl px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{e.weightLbs} lbs</div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {e.date}
+                    {e.bodyFatPct && ` · ${e.bodyFatPct}% BF`}
+                    {e.notes && ` · ${e.notes}`}
+                  </div>
+                  {reasonLabel && (
+                    <div className="text-xs text-amber-400 mt-0.5">{reasonLabel}</div>
+                  )}
                 </div>
+                <button
+                  onClick={() => deleteEntry(e.id)}
+                  className="text-gray-600 hover:text-red-400 text-lg ml-2"
+                >
+                  ×
+                </button>
               </div>
-              <button
-                onClick={() => deleteEntry(e.id)}
-                className="text-gray-600 hover:text-red-400 text-lg"
-              >
-                ×
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
+
+      {pendingEntry && (
+        <ReasonPickerModal
+          delta={pendingEntry.delta}
+          prevWeight={pendingEntry.prevWeight}
+          newWeight={parseFloat(pendingEntry.weightLbs)}
+          onPick={handleReasonSelect}
+          onSkip={handleSkipReason}
+        />
+      )}
+    </div>
+  )
+}
+
+function ReasonPickerModal({ delta, prevWeight, newWeight, onPick, onSkip }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-6"
+      onClick={onSkip}
+    >
+      <div
+        className="w-full max-w-sm bg-navy-light rounded-3xl p-5 border border-amber-500/30 shadow-2xl max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-4">
+          <div className="text-3xl mb-1">📈</div>
+          <h3 className="text-lg font-bold text-white">Weight went up</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {prevWeight.toFixed(1)} → {newWeight.toFixed(1)} lbs
+            <span className="text-amber-400 font-semibold"> (+{delta.toFixed(1)})</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+            What's the likely reason? This helps spot patterns over time.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {WEIGHT_GAIN_REASONS.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => onPick(r.key)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-navy-lighter text-left text-xs text-gray-200 active:bg-accent/20 active:text-accent transition-colors"
+            >
+              <span className="text-base">{r.icon}</span>
+              <span className="truncate">{r.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={onSkip}
+          className="w-full py-2.5 rounded-xl text-xs font-semibold text-gray-400 active:text-white"
+        >
+          Skip — no reason
+        </button>
+      </div>
     </div>
   )
 }

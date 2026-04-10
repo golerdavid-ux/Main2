@@ -34,6 +34,7 @@ export const useWeightStore = create(
           weightLbs: parseFloat(entry.weightLbs),
           bodyFatPct: entry.bodyFatPct ? parseFloat(entry.bodyFatPct) : null,
           notes: entry.notes || null,
+          reason: entry.reason || null,
         }
         const entries = [...get().entries, newEntry].sort(
           (a, b) => new Date(a.date) - new Date(b.date)
