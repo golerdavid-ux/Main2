@@ -1,0 +1,16 @@
+name = "party-planning"
+compatibility_date = "2024-09-01"
+
+# The React build output directory
+pages_build_output_dir = "frontend/build"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "party-planning-db"
+database_id = ""
+
+# R2 Bucket binding for inspiration photos (uncomment after creating the bucket)
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "party-planning-photos"

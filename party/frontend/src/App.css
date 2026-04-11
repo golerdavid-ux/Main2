@@ -1,0 +1,284 @@
+/* ================== Layout ================== */
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  margin-bottom: 16px;
+}
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.header .subtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+.header .countdown {
+  text-align: right;
+}
+.header .countdown .days {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #ffd1e1;
+  line-height: 1;
+}
+.header .countdown .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.nav button {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.nav button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.nav button.active {
+  background: #ffd1e1;
+  color: #4a1f3d;
+  border-color: #ffd1e1;
+}
+
+/* ================== Cards ================== */
+.card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(10px);
+}
+.card h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ================== Forms ================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.form-grid.wide {
+  grid-template-columns: 1fr;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+input::placeholder, textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #ffd1e1;
+}
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+select option {
+  background: #4a1f3d;
+  color: #fff;
+}
+label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+}
+button.primary {
+  padding: 10px 18px;
+  background: #ffd1e1;
+  color: #4a1f3d;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+button.primary:hover { background: #ffb7d0; }
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+button.ghost {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+button.ghost:hover { background: rgba(255, 255, 255, 0.08); }
+button.danger {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  color: #ff9f9f;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+button.danger:hover { background: rgba(255, 100, 100, 0.12); }
+
+/* ================== Lists ================== */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.list-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.list-item.done { opacity: 0.55; }
+.list-item .main { flex: 1; min-width: 0; }
+.list-item .title { font-weight: 600; }
+.list-item .sub { font-size: 0.8rem; color: rgba(255, 255, 255, 0.65); margin-top: 2px; }
+.list-item .meta { font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin-top: 4px; }
+.list-item .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.strike { text-decoration: line-through; }
+.empty {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* ================== Dashboard ================== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.stat {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #ffd1e1;
+}
+.stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+.progress {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd1e1, #ff8bc4);
+  transition: width 0.3s ease;
+}
+.badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+.badge.warn { background: rgba(255, 180, 0, 0.25); color: #ffd68f; }
+.badge.danger { background: rgba(255, 80, 80, 0.25); color: #ff9f9f; }
+.badge.ok { background: rgba(100, 220, 150, 0.22); color: #9cf0bb; }
+
+/* ================== Login gate ================== */
+.login {
+  max-width: 400px;
+  margin: 80px auto;
+  padding: 30px 28px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+.login h1 {
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+.login p {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+.login .error {
+  color: #ff9f9f;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+/* ================== Inspiration thumbs ================== */
+.thumb {
+  width: 100%;
+  max-width: 220px;
+  border-radius: 10px;
+  margin-top: 8px;
+  display: block;
+}
