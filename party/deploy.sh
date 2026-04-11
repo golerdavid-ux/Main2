@@ -17,14 +17,18 @@ fi
 echo "Step 1: Setting up D1 database..."
 DB_OUTPUT=$(npx wrangler d1 create party-planning-db 2>&1 || true)
 
+PLACEHOLDER_ID="00000000-0000-0000-0000-000000000000"
+
 if echo "$DB_OUTPUT" | grep -q "database_id"; then
   DB_ID=$(echo "$DB_OUTPUT" | grep "database_id" | head -1 | awk -F'"' '{print $2}')
   echo "  Created D1 database: $DB_ID"
+  sed -i "s/database_id = \"$PLACEHOLDER_ID\"/database_id = \"$DB_ID\"/" wrangler.toml
   sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" wrangler.toml
 elif echo "$DB_OUTPUT" | grep -q "already exists"; then
   echo "  D1 database already exists."
   DB_ID=$(npx wrangler d1 list 2>&1 | grep "party-planning-db" | awk '{print $1}')
   if [ -n "$DB_ID" ]; then
+    sed -i "s/database_id = \"$PLACEHOLDER_ID\"/database_id = \"$DB_ID\"/" wrangler.toml
     sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" wrangler.toml
   fi
 else
