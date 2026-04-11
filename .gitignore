@@ -12,6 +12,7 @@ yarn-error.log*
 backend/dist/
 frontend/build/
 frontend/dist/
+party/frontend/build/
 
 # IDE
 .vscode/
