@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS inspiration_notes (
 );
 
 -- Seed default settings rows (idempotent)
-INSERT OR IGNORE INTO settings (key, value) VALUES ('party_name', "40th Birthday Party");
+INSERT OR IGNORE INTO settings (key, value) VALUES ('party_name', "Arielle's 40th Birthday Party");
 INSERT OR IGNORE INTO settings (key, value) VALUES ('party_date', '');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('venue_headline', '');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('guest_count_goal', '');

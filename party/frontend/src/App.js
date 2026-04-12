@@ -26,7 +26,7 @@ async function api(path, { method = 'GET', body, form } = {}) {
 const COURSES = ['appetizer', 'main', 'side', 'dessert', 'drink'];
 const BUDGET_CATEGORIES = ['venue', 'food', 'decor', 'music', 'other'];
 const VENDOR_CATEGORIES = ['venue', 'caterer', 'dj', 'florist', 'bakery', 'photographer', 'rentals', 'other'];
-const ASSIGNEES = ['him', 'wife', 'vendor'];
+const ASSIGNEES = ['David', 'Arielle', 'vendor'];
 
 function formatMoney(n) {
   const v = Number(n) || 0;
@@ -148,7 +148,7 @@ function LoginGate({ onLogin }) {
 // ========================================================================
 function Header({ settings, onLogout, setView }) {
   const days = daysUntil(settings.party_date);
-  const name = settings.party_name || '40th Birthday Party';
+  const name = settings.party_name || "Arielle's 40th Birthday Party";
   return (
     <div className="header">
       <div>
