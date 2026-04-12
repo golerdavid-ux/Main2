@@ -292,6 +292,8 @@ function DashboardView() {
 function TasksView() {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ title: '', dueDate: '', assignee: '', notes: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', dueDate: '', assignee: '', notes: '' });
   const load = () => api('/api/tasks').then(({ ok, data }) => { if (ok) setItems(data.tasks); });
   useEffect(() => { load(); }, []);
 
@@ -309,6 +311,16 @@ function TasksView() {
     if (!window.confirm('Delete this task?')) return;
     await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
     load();
+  };
+  const startEdit = (t) => {
+    setEditingId(t.id);
+    setEditForm({ title: t.title, dueDate: t.dueDate || '', assignee: t.assignee || '', notes: t.notes || '' });
+  };
+  const cancelEdit = () => setEditingId(null);
+  const saveEdit = async (t) => {
+    if (!editForm.title.trim()) return;
+    const { ok } = await api(`/api/tasks/${t.id}`, { method: 'PUT', body: editForm });
+    if (ok) { setEditingId(null); load(); }
   };
 
   return (
@@ -353,17 +365,50 @@ function TasksView() {
                   onChange={() => toggle(t)}
                   style={{ width: 'auto', marginTop: 4 }}
                 />
-                <div className="main">
-                  <div className={'title' + (t.status === 'done' ? ' strike' : '')}>{t.title}</div>
-                  {t.notes && <div className="sub">{t.notes}</div>}
-                  <div className="meta">
-                    {t.dueDate ? formatDate(t.dueDate) : 'no date'}
-                    {t.assignee && ' • ' + t.assignee}
+                {editingId === t.id ? (
+                  <div className="main" style={{ width: '100%' }}>
+                    <div className="form-grid">
+                      <div className="field" style={{ gridColumn: '1 / -1' }}>
+                        <label>Title</label>
+                        <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+                      </div>
+                      <div className="field">
+                        <label>Due date</label>
+                        <input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })} />
+                      </div>
+                      <div className="field">
+                        <label>Assignee</label>
+                        <select value={editForm.assignee} onChange={(e) => setEditForm({ ...editForm, assignee: e.target.value })}>
+                          <option value="">—</option>
+                          {ASSIGNEES.map((a) => <option key={a}>{a}</option>)}
+                        </select>
+                      </div>
+                      <div className="field" style={{ gridColumn: '1 / -1' }}>
+                        <label>Notes</label>
+                        <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <button type="button" className="primary" onClick={() => saveEdit(t)}>Save</button>
+                      <button type="button" className="ghost" onClick={cancelEdit}>Cancel</button>
+                    </div>
                   </div>
-                </div>
-                <div className="actions">
-                  <button className="danger" onClick={() => del(t)}>Delete</button>
-                </div>
+                ) : (
+                  <>
+                    <div className="main">
+                      <div className={'title' + (t.status === 'done' ? ' strike' : '')}>{t.title}</div>
+                      {t.notes && <div className="sub">{t.notes}</div>}
+                      <div className="meta">
+                        {t.dueDate ? formatDate(t.dueDate) : 'no date'}
+                        {t.assignee && ' • ' + t.assignee}
+                      </div>
+                    </div>
+                    <div className="actions">
+                      <button className="ghost" onClick={() => startEdit(t)}>Edit</button>
+                      <button className="danger" onClick={() => del(t)}>Delete</button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
