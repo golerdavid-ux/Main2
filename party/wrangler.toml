@@ -10,9 +10,9 @@ pages_build_output_dir = "frontend/build"
 [[d1_databases]]
 binding = "DB"
 database_name = "party-planning-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6abf5234-de2d-4141-b858-cb932c3b5e0b"
 
-# R2 Bucket binding for inspiration photos (uncomment after creating the bucket)
-# [[r2_buckets]]
-# binding = "PHOTOS"
-# bucket_name = "party-planning-photos"
+# R2 Bucket binding for inspiration photos
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "party-planning-photos"
