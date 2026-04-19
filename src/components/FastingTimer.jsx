@@ -91,6 +91,8 @@ export default function FastingTimer() {
   const [selectedType, setSelectedType] = useState(preferredFastType)
   const [customHours, setCustomHours] = useState(16)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [showBackdate, setShowBackdate] = useState(false)
+  const [backdateHours, setBackdateHours] = useState(1)
   const [notifStatus, setNotifStatus] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   )
@@ -112,12 +114,16 @@ export default function FastingTimer() {
 
   const handleStart = useCallback(() => {
     setPreferredFastType(selectedType)
-    startFast(selectedType, selectedType === 'custom' ? customHours : null)
-    // Prompt for notifications on first fast start if not yet asked
+    const override = showBackdate
+      ? Date.now() - backdateHours * 3600000
+      : null
+    startFast(selectedType, selectedType === 'custom' ? customHours : null, override)
+    setShowBackdate(false)
+    setBackdateHours(1)
     if (notifStatus === 'default') {
       handleEnableNotifications()
     }
-  }, [selectedType, customHours, startFast, setPreferredFastType, notifStatus, handleEnableNotifications])
+  }, [selectedType, customHours, showBackdate, backdateHours, startFast, setPreferredFastType, notifStatus, handleEnableNotifications])
 
   // End a fast — if target wasn't hit, show a roast before committing.
   const handleEndFast = useCallback(
@@ -289,11 +295,47 @@ export default function FastingTimer() {
         <div className="text-sm text-gray-500 mt-2">Ready to start</div>
       </ProgressRing>
 
+      {/* Backdate toggle */}
+      <div className="w-full max-w-xs mt-4">
+        <button
+          onClick={() => setShowBackdate(!showBackdate)}
+          className="text-xs text-gray-500 active:text-gray-300 transition-colors"
+        >
+          {showBackdate ? 'Start now instead' : 'I started earlier'}
+        </button>
+        {showBackdate && (
+          <div className="mt-2 bg-navy-light rounded-xl p-4">
+            <label className="text-xs text-gray-400 block mb-2">How many hours ago did you start fasting?</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setBackdateHours(Math.max(0.5, backdateHours - 0.5))}
+                className="w-8 h-8 rounded-lg bg-navy-lighter text-gray-300 font-bold text-lg active:bg-navy"
+              >
+                −
+              </button>
+              <div className="flex-1 text-center">
+                <span className="text-2xl font-bold text-white">{backdateHours}</span>
+                <span className="text-sm text-gray-400 ml-1">hrs ago</span>
+              </div>
+              <button
+                onClick={() => setBackdateHours(Math.min(12, backdateHours + 0.5))}
+                className="w-8 h-8 rounded-lg bg-navy-lighter text-gray-300 font-bold text-lg active:bg-navy"
+              >
+                +
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Timer will start from {new Date(Date.now() - backdateHours * 3600000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </p>
+          </div>
+        )}
+      </div>
+
       <button
         onClick={handleStart}
-        className="mt-6 w-full max-w-xs py-4 rounded-xl font-bold text-lg bg-accent text-white active:bg-accent/80 transition-colors"
+        className="mt-4 w-full max-w-xs py-4 rounded-xl font-bold text-lg bg-accent text-white active:bg-accent/80 transition-colors"
       >
-        Start Fast
+        {showBackdate ? `Start Fast (from ${backdateHours}h ago)` : 'Start Fast'}
       </button>
 
       {/* Schedule section */}

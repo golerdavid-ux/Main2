@@ -17,7 +17,7 @@ export const useFastStore = create(
       activeFast: null,
       history: [],
 
-      startFast: (type, customHours) => {
+      startFast: (type, customHours, startTimeOverride) => {
         const { activeFast } = get()
         if (activeFast) return false
 
@@ -29,7 +29,7 @@ export const useFastStore = create(
           activeFast: {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
             type,
-            startTime: Date.now(),
+            startTime: startTimeOverride || Date.now(),
             endTime: null,
             targetDurationMs,
             status: 'active',
