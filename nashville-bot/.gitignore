@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.local
+
+# Persisted trip state (keep the directory, ignore the contents)
+data/*.json
+npm-debug.log*
+.DS_Store
